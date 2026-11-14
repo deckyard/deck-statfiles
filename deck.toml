@@ -1,0 +1,17 @@
+[package]
+name = "@deckyard/statfiles"
+version = "0.1.0"
+description = "Readers for SPSS, Stata and SAS data files"
+license = "LGPL-3.0-only"
+authors = ["mplx <mplx@jennifer-lang.dev>"]
+# Pure readers over `bytes`: no file, network or process access.
+capabilities = []
+keywords = ["spss", "stata", "sas", "sav", "dta", "xpt", "statistics", "data-files"]
+
+[package.urls]
+deck = "https://raw.githubusercontent.com/deckyard/deck-statfiles/main/deck.toml"
+homepage = "https://github.com/deckyard/deck-statfiles"
+manual = "https://deckyard.github.io/deck-statfiles/"
+
+[engines]
+jennifer = ">=0.26.0"
