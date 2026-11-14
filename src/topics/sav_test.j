@@ -74,7 +74,7 @@ func testSavReadStatPlain() {
     testing.assertEqual($id.label, "Identifier");
     testing.assertEqual($id.type, "numeric");
     testing.assertEqual($id.storage, "numeric");
-    testing.assertEqual($id.width, 0);
+    testing.assertEqual($id.width, 8);
     testing.assertEqual($id.format, "F8.2");
     testing.assertEqual($id.valueLabels, {"1": "one", "2": "two", "3.5": "three and a half"});
     testing.assertEqual(labelOf($ds, "id", 1), "two");

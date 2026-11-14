@@ -175,9 +175,26 @@ func dtaCharset(opts as Options, release as int) {
  * @return {string} the text without trailing blanks and NULs
  */
 func dtaText(b as bytes, charset as string) {
+    return dtaDecode($b, $charset, true);
+}
+
+/**
+ * Decode text, turning a byte the character set lacks into a statfiles
+ * error.
+ *
+ * @param b {bytes} the text
+ * @param charset {string} the character set
+ * @param trim {bool} whether to drop trailing blanks and NULs
+ * @return {string} the text
+ */
+func dtaDecode(b as bytes, charset as string, trim as bool) {
     def s as string;
     try {
-        $s = decodeText($b, $charset);
+        if ($trim) {
+            $s = decodeText($b, $charset);
+        } else {
+            $s = decodeBytes($b, $charset);
+        }
     } catch (e) {
         if ($e.kind == ERROR_KIND) {
             throw $e;
@@ -859,7 +876,8 @@ func dtaTaggedTail(data as bytes, head as DtaHead) {
         if ($v == 0 and $o == 0 or maps.has($strls, $key)) {
             fail("a strL defined twice or as (0,0): " + $key);
         }
-        $strls[$key] = dtaText($body, $head.charset);
+        # a value as stored: blanks kept, and a binary strL's NULs too
+        $strls[$key] = dtaDecode($body, $head.charset, false);
         $at = $at + $size;
     }
     $at = dtaTag($data, $at, "</strls>");
@@ -945,6 +963,7 @@ func dtaBuild(data as bytes, head as DtaHead, tail as DtaTail) {
             $v.type = "string";
             $col = dtaStrls($data, $head, $offset, $record, $tail.strls);
         } else {
+            $v.width = dtaWidth($t);
             $col = dtaNumbers($data, $head, $offset, $record, $t);
             def ln as string init $head.labelNames[$i];
             if ($ln != "" and maps.has($tail.labels, $ln)) {
@@ -1094,7 +1113,8 @@ func dtaMissing(x as float, t as int, release as int) {
 }
 
 /**
- * Read a fixed-width string column.
+ * Read a fixed-width string column: each value up to its first NUL, its
+ * blanks kept.
  *
  * @param data {bytes} the file
  * @param head {DtaHead} its head
@@ -1115,9 +1135,7 @@ func dtaStrings(data as bytes, head as DtaHead, at as int, record as int, width 
             if ($end < 0) {
                 $end = $o + $width;
             }
-            while ($end > $o and $data[$end - 1] == 32) {
-                $end = $end - 1;
-            }
+            # trailing blanks are data in Stata: only the NUL padding goes
             if ($utf8) {
                 $out[] = convert.stringFromBytes("utf-8", binary.slice($data, $o, $end));
             } else {

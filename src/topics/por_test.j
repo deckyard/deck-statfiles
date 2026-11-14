@@ -96,6 +96,8 @@ func testPorReadStat() {
     testing.assertEqual($ds.rowCount, 5);
     testing.assertEqual(names($ds), ["ID", "SCORE", "AGE", "NAME", "BORN"]);
     testing.assertEqual(variable($ds, "SCORE").format, "F8.2");
+    # a text format: a number has no byte width
+    testing.assertEqual(variable($ds, "SCORE").width, 0);
     testing.assertEqual($ds.numbers[1], [1.5, 0.0, 99.0, -2.25, 1e10]);
     testing.assertEqual($ds.missing[1], ["", ".", "", "", ""]);
     testing.assertEqual($ds.numbers[2], [34.0, 999.0, 12.0, 5.0, 70.0]);

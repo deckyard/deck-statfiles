@@ -94,6 +94,71 @@ func testSas7CatalogEncoding() {
     testing.assertEqual(readSas7bcat($data, $opts), {"XFMT": {".a": "Áple", ".z": "Zebra"}});
 }
 
+func testSas7CatalogRanges() {
+    # the character range 'a'-<'g' and the numeric range 1-<2 are left out,
+    # whatever their ends; the range's label is a type-9 record (32 bytes of
+    # text, its length in bytes 2-3), stepped over to reach the next label
+    testing.assertEqual(
+        sas7cRead(SAS7_CATALOG_RULES),
+        {"$GENDER": {"m": "Male"}, "WORKSHOP": {"2": "SAS"}});
+    def ds as Dataset init withSasLabels(sas7Read(SAS7_FILE_HADLEY), sas7cRead(SAS7_CATALOG_RULES));
+    testing.assertEqual(labelOf($ds, "workshop", 0), "");
+    testing.assertEqual(labelOf($ds, "workshop", 1), "SAS");
+    testing.assertEqual(labelOf($ds, "gender", 0), "");
+    testing.assertEqual(labelOf($ds, "gender", 4), "Male");
+}
+
+func testSas7CatalogLinks() {
+    # WORKSHOP's block is one link at page 4, offset 271 (file offset
+    # 13583): pointing it at itself makes a chain without end
+    def data as bytes init sas7Fixture(SAS7_CATALOG_HADLEY);
+    testing.assertEqual(sas7cErrorKind($data, options()), "");
+    testing.assertEqual(
+        sas7cErrorKind(sas7Patch($data, 13583, [4, 0, 0, 0, 15, 1]), options()),
+        ERROR_KIND);
+    # a next link past the last page
+    testing.assertEqual(
+        sas7cErrorKind(sas7Patch($data, 13583, [5, 0, 0, 0, 15, 1]), options()),
+        ERROR_KIND);
+}
+
+func testSas7CatalogLimits() {
+    # the catalog's size counts against maxBytes, checked before parsing
+    def data as bytes init sas7Fixture(SAS7_CATALOG_HADLEY);
+    def opts as Options init options();
+    $opts.maxBytes = len($data);
+    testing.assertEqual(sas7cErrorKind($data, $opts), "");
+    $opts.maxBytes = len($data) - 1;
+    testing.assertEqual(sas7cErrorKind($data, $opts), "limit");
+    # every label read counts against maxCells: 2 + 2 here
+    $opts = options();
+    $opts.maxCells = 4;
+    testing.assertEqual(sas7cErrorKind($data, $opts), "");
+    $opts.maxCells = 3;
+    testing.assertEqual(sas7cErrorKind($data, $opts), "limit");
+    # ranges and OTHER count too, though left out of the result: 2 + 2
+    # labels and 2 + OTHER
+    $opts.maxCells = 4;
+    testing.assertEqual(sas7cErrorKind(sas7Fixture(SAS7_CATALOG_RULES), $opts), "");
+    $opts.maxCells = 3;
+    testing.assertEqual(sas7cErrorKind(sas7Fixture(SAS7_CATALOG_RULES), $opts), "limit");
+    testing.assertEqual(sas7cErrorKind(sas7Fixture(SAS7_CATALOG_OTHER), $opts), "");
+    $opts.maxCells = 2;
+    testing.assertEqual(sas7cErrorKind(sas7Fixture(SAS7_CATALOG_OTHER), $opts), "limit");
+}
+
+func testSas7CatalogEmptyFormat() {
+    # $YESNO's two values made ranges (entry type byte 6 set to 4): only
+    # its OTHER label is left, so the format is left out, not an empty map
+    def data as bytes init sas7Fixture(SAS7_CATALOG_OTHER);
+    testing.assertEqual(
+        readSas7bcat(sas7Patch($data, 20751, [4]), options()),
+        {"$YESNO": {"No, not really": "False"}});
+    testing.assertEqual(
+        readSas7bcat(sas7Patch(sas7Patch($data, 20751, [4]), 20708, [4]), options()),
+        {});
+}
+
 func testSas7CatalogKeys() {
     # positive values are stored with the sign bit set, negative ones with
     # every bit flipped

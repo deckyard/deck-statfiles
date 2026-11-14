@@ -7,8 +7,8 @@ The deck reads SAS's own data sets (`.sas7bdat`) and the value labels of
 SAS format catalogs (`.sas7bcat`). SAS does not document either format;
 the readers follow the reverse engineering of ReadStat, parso, pandas and
 Matthew Shotwell's notes for the sas7bdat R package, and were checked
-cell by cell against pyreadstat (ReadStat) and pandas on about 190 sample
-files.
+cell by cell against pyreadstat (ReadStat) and pandas on about 350
+sample files and 590 generated ones.
 
 Covered: 32- and 64-bit files, either byte order, uncompressed files and
 files whose rows SAS compressed with `COMPRESS=CHAR` (RLE, `SASYZCRL`) or
@@ -38,7 +38,7 @@ data set's name.
 | the data set name in the header | `Dataset.name` |
 | the data set label (row size subheader) | `Dataset.label` |
 | the SAS release in the header | `Dataset.version` |
-| column type 1, stored in 3 to 8 bytes | `type` and `storage` `numeric`, `width` 0 |
+| column type 1, stored in 3 to 8 bytes | `type` and `storage` `numeric`, `width` the stored length (3 to 8) |
 | column type 2 | `type` and `storage` `string`, `width` the stored length |
 | column name and label | `Variable.name`, `Variable.label` |
 | format name, width and decimals | `Variable.format`, written as SAS does: `DATE9.`, `BEST12.`, `$CHAR20.`, `8.2`, `""` when none |
@@ -136,13 +136,19 @@ so their text reads as windows-1252 and non-ASCII labels fail; set
 
 Not covered, and left out of the map:
 
-- a label for a range of numbers (`1-5 = 'low'`): it has no single key;
+- a label for a range of values, numeric or character (`1-5 = 'low'`,
+  `low-<0`, `'A'-'F'`): it has no single key (ReadStat keys a range by its
+  start, or by its two ends run together for a character range, which
+  matches no value);
 - the `OTHER` label;
-- informats (`INVALUE`), and picture formats' pictures;
-- a character range (`'a'-'m'`): its layout is not known, and only its
-  first value is read, as ReadStat does;
-- a label longer than its block: ReadStat cuts it off; here it is an
-  error.
+- informats (`INVALUE`), and picture formats' pictures.
+
+A format left with no label once ranges and `OTHER` are left out is not
+in the map at all, as in ReadStat (not an empty map).
+
+A label longer than its block is an error. The 32-byte label records SAS
+9.4 writes for some ranges (the GSS catalogs have 2,527 of them, which
+ReadStat refuses) are read and stepped over.
 
 ## Errors and limits
 
@@ -160,7 +166,13 @@ Not covered, and left out of the map:
 - `Options.maxBytes` caps the size of the unpacked rows of a compressed
   file, also checked before unpacking.
 - A catalog that is not one, or whose blocks or entries contradict each
-  other, throws kind `"statfiles"`.
+  other, throws kind `"statfiles"`. So does a block whose chain of links
+  runs past a page or loops: the blocks together may not be longer than
+  the file.
+- A catalog longer than `Options.maxBytes` is kind `"limit"`, checked
+  before it is parsed; so is one of more than `Options.maxCells` value
+  labels, counted from each format's header before its labels are read
+  (`OTHER` and range labels count, though they are left out of the map).
 
 ```jennifer
 try {
@@ -170,10 +182,20 @@ try {
 }
 ```
 
-Reading 10,000 rows of 20 variables takes about 0.7 seconds from an
-uncompressed file, 2.2 seconds from an RLE-compressed one and 3 seconds
-from an RDC-compressed one: the compressed rows are unpacked one command
-at a time.
+Reading 10,000 rows of 20 variables (16 numbers, 4 strings) takes about
+0.7 to 1 second from an uncompressed file, 2.1 seconds from an
+RLE-compressed one and 3.3 seconds from an RDC-compressed one: the
+compressed rows are unpacked one command at a time. Numbers are converted
+in bulk, those stored in 3 to 7 bytes too; a missing value costs a few
+microseconds of its own. The GSS 2021 file (4,032 rows of 943 variables,
+most of them 3 to 6 bytes, 46% missing, RLE) takes about 35 seconds,
+most of it unpacking rows, and 4.9 GB of memory.
+
+Memory is about 1.2 KB per cell (the interpreter's values), so a file of
+20 million cells, the `maxCells` default, needs about 23 GB; lower
+`maxCells` to bound it. A large catalog is slow too: the GSS 2021
+`formats.sas7bcat` (146 MB, 1,638 formats, about a million labels) takes
+about 50 seconds and 4 GB.
 
 ## Not covered
 

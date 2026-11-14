@@ -52,7 +52,7 @@ def struct XptMember {
 
 /*
  * A variable as its NAMESTR record describes it, with the stored length
- * (Variable.width is 0 for a number) and the position in the row.
+ * and the position in the row.
  */
 def struct XptField {
     variable as Variable,
@@ -507,7 +507,6 @@ func xptNamestr(data as bytes, at as int, v8 as bool, charset as string) {
     if ($numeric) {
         $v.type = "numeric";
         $v.storage = "numeric";
-        $v.width = 0;
     }
     return XptField{variable: $v, width: $width, position: $position};
 }

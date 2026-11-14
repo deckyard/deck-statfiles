@@ -96,6 +96,20 @@ func dtaStorages(ds as Dataset) {
 }
 
 /**
+ * The widths of a dataset's variables: bytes per value (0 for a strL).
+ *
+ * @param ds {Dataset} the dataset
+ * @return {list of int} one width per variable
+ */
+func dtaWidths(ds as Dataset) {
+    def out as list of int init [];
+    for (def v in $ds.variables) {
+        $out[] = $v.width;
+    }
+    return $out;
+}
+
+/**
  * A variable's cells as `text` writes them.
  *
  * @param ds {Dataset} the dataset
@@ -139,17 +153,19 @@ func testDta118Pyreadstat() {
     testing.assertEqual(names($ds), ["byt", "i16", "i32", "f32", "dbl", "txt"]);
     # pyreadstat stores a float32 column as double
     testing.assertEqual(dtaStorages($ds), ["long", "long", "long", "double", "double", "str9"]);
+    testing.assertEqual(dtaWidths($ds), [4, 4, 4, 8, 8, 9]);
     testing.assertEqual(column($ds, "byt"), [1.0, -127.0, 100.0, 7.0, 0.0]);
     testing.assertEqual(column($ds, "i32"), [70000.0, -2147483647.0, 2147483620.0, 1.0, 2.0]);
     testing.assertEqual(dtaCells($ds, "f32"), ["1.5", "-2.25", "1.0000000150474662e+30", ".", "3"]);
     testing.assertEqual($ds.numbers[3][3], 0.0);
     testing.assertEqual(dtaCells($ds, "dbl"), ["1.25", ".", ".a", ".z", "-1e+300"]);
     testing.assertEqual($ds.missing[4], ["", ".", ".a", ".z", ""]);
-    testing.assertEqual(textColumn($ds, "txt"), ["Grüße", "日本語", "", "plain", "x"]);
+    # trailing blanks are kept, as pandas and pyreadstat keep them
+    testing.assertEqual(textColumn($ds, "txt"), ["Grüße", "日本語", "", "plain", "x  "]);
     def v as Variable init variable($ds, "byt");
     testing.assertEqual($v.label, "A byte");
     testing.assertEqual($v.type, "numeric");
-    testing.assertEqual($v.width, 0);
+    testing.assertEqual($v.width, 4);
     testing.assertEqual($v.valueLabels, {"1": "one", "7": "seven", "100": "hundred"});
     testing.assertEqual(labelOf($ds, "byt", 3), "seven");
     testing.assertEqual(variable($ds, "txt").label, "Text ünïcode");
@@ -167,6 +183,7 @@ func testDta117BigEndian() {
     testing.assertEqual(
         dtaStorages($ds),
         ["byte", "int", "long", "float", "double", "str6", "strL", "byte"]);
+    testing.assertEqual(dtaWidths($ds), [1, 2, 4, 4, 8, 6, 0, 1]);
     testing.assertEqual(column($ds, "b"), [1.0, 2.0, 3.0, 4.0]);
     testing.assertEqual(column($ds, "h"), [1000.0, -1000.0, 0.0, 7.0]);
     testing.assertEqual(column($ds, "l"), [100000.0, -100000.0, 0.0, 9.0]);
@@ -184,16 +201,33 @@ func testDtaBigEndianStrls() {
     for (def lines in [DTA_PD118BE_BASE64, DTA_PD119BE_BASE64]) {
         def ds as Dataset init dtaOpen($lines);
         testing.assertEqual(dtaStorages($ds), ["double", "strL", "strL"]);
+        testing.assertEqual(dtaWidths($ds), [8, 0, 0]);
         testing.assertEqual(dtaCells($ds, "x"), ["1", ".", "3"]);
         testing.assertEqual(textColumn($ds, "t"), ["ünï", "", "日本"]);
         testing.assertEqual(textColumn($ds, "u"), ["a", "a", "b"]);
     }
     testing.assertEqual(dtaOpen(DTA_PD119BE_BASE64).label, "big 119");
-    # the first GSO as binary (type 129): its bytes as they are, the NUL dropped as trailing
+    # the first GSO as binary (type 129): its bytes as they are, the NUL
+    # that closed it as text included
     def b as bytes init dtaSample(DTA_PD118BE_BASE64);
     testing.assertEqual(
         textColumn(dtaReadBytes(dtaPatch($b, dtaFind($b, "GSO") + 15, [129])), "t")[0],
-        "ünï");
+        "ünï\u0000");
+}
+
+func testDtaBlanks() {
+    # a value keeps its blanks, in str<n> and strL alike; only the NUL
+    # padding of a str<n> goes. Labels are trimmed, as pyreadstat does
+    # (pandas keeps their blanks).
+    for (def lines in [DTA_BLANK114_BASE64, DTA_BLANK118_BASE64, DTA_BLANKSTRL117_BASE64]) {
+        def ds as Dataset init dtaOpen($lines);
+        testing.assertEqual(textColumn($ds, "s"), ["a ", "  b", " ", "", "x y  ", "end"]);
+    }
+    def ds as Dataset init dtaOpen(DTA_BLANK118_BASE64);
+    testing.assertEqual(dtaStorages($ds), ["str5", "double"]);
+    testing.assertEqual(variable($ds, "s").label, "lab");
+    testing.assertEqual(variable($ds, "n").valueLabels, {"1": "one", "2": " two"});
+    testing.assertEqual(dtaStorages(dtaOpen(DTA_BLANKSTRL117_BASE64)), ["strL", "double"]);
 }
 
 func testDtaLongStrls() {
@@ -213,6 +247,7 @@ func testDta118ValueLabelsAndCharacteristics() {
         def ds as Dataset init dtaOpen($lines);
         testing.assertEqual($ds.label, "Schweiz €");
         testing.assertEqual(dtaStorages($ds), ["byte", "int", "byte", "str6"]);
+        testing.assertEqual(dtaWidths($ds), [1, 2, 1, 6]);
         testing.assertEqual(column($ds, "b"), [-1.0, 0.0, 100.0]);
         testing.assertEqual(column($ds, "h"), [-300.0, 0.0, 300.0]);
         testing.assertEqual(variable($ds, "city").label, "Stadt ü");
@@ -226,6 +261,7 @@ func testDtaMissingCodes() {
     for (def lines in [DTA_H115_BASE64, DTA_H113BE_BASE64]) {
         def ds as Dataset init dtaOpen($lines);
         testing.assertEqual(dtaStorages($ds), ["byte", "int", "long", "float", "double", "str5"]);
+        testing.assertEqual(dtaWidths($ds), [1, 2, 4, 4, 8, 5]);
         testing.assertEqual(dtaCells($ds, "b"), ["100", ".", ".a", ".z", "-127"]);
         testing.assertEqual(dtaCells($ds, "i"), ["32740", ".", ".a", ".z", "-32767"]);
         testing.assertEqual(dtaCells($ds, "l"), ["2147483620", ".", ".a", ".z", "-2147483647"]);
@@ -278,6 +314,7 @@ func testDtaOldFormats() {
         testing.assertEqual($ds.label, "old" + $versions[$i]);
         testing.assertEqual(names($ds), ["a", "bb", "c", "d", "e", "s"]);
         testing.assertEqual(dtaStorages($ds), ["byte", "int", "long", "float", "double", "str4"]);
+        testing.assertEqual(dtaWidths($ds), [1, 2, 4, 4, 8, 4]);
         testing.assertEqual(dtaCells($ds, "a"), ["1", ".", "126"]);
         testing.assertEqual(dtaCells($ds, "bb"), ["2", ".", "32766"]);
         testing.assertEqual(dtaCells($ds, "c"), ["3", ".", "2147483646"]);

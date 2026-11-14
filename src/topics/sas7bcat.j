@@ -20,10 +20,22 @@ def const SAS7C_INDEX_PAGE as int init 1;
 # Index records are also looked for from this page on.
 def const SAS7C_FIRST_SCAN_PAGE as int init 3;
 
+# The type (byte 6) of a character value entry that holds a range: values
+# up to 16 bytes long, and longer ones. Single values are 10 and 3; a
+# numeric entry is 1, its rule flags (byte 7: LOW, HIGH, start or end left
+# out) are 0 for a single value.
+def const SAS7C_CHAR_RANGE as int init 11;
+def const SAS7C_LONG_RANGE as int init 4;
+
+# The type (byte 6) of a label record of 32 bytes of text whose length is
+# in bytes 2-3, not 8-9 (SAS 9.4 writes it for some range labels).
+def const SAS7C_LABEL_FIXED as int init 9;
+
 /* One format of a catalog: its name and its value labels. */
 def struct Sas7cFormat {
     name as string,
-    labels as map of string to string
+    labels as map of string to string,
+    count as int
 };
 
 # The sign bit of a 64-bit pattern.
@@ -37,8 +49,14 @@ def const SAS7C_SIGN as int init -9223372036854775807 - 1;
  * `.z` or `._`, strings without trailing blanks. A format is keyed by its
  * name in upper case without the period: `WORKSHOP`, `$GENDER` (character
  * formats keep their `$`). Informats are left out, as are entries that
- * cover a range of numbers (`1-5`) and the `OTHER` label; only the start
- * of a character range is read (its layout is not known).
+ * cover a range (`1-5`, `low-<0`, `'A'-'F'`) and the `OTHER` label: a map
+ * holds single values only. A format left with no label (only `OTHER` or
+ * ranges) is left out, as ReadStat does.
+ *
+ * The caps of `Options` apply: the catalog may be at most `maxBytes` long,
+ * checked before it is parsed, and hold at most `maxCells` value labels
+ * (every label of every format read, `OTHER` and ranges included), checked
+ * from each format's header before its labels are read.
  *
  * The text is decoded from `Options.encoding`, else from the catalog's own
  * character set, else windows-1252. Catalogs written by SAS for UTF-8
@@ -48,7 +66,8 @@ def const SAS7C_SIGN as int init -9223372036854775807 - 1;
  * @param opts {Options} how to read it
  * @return {map of string to map of string to string} format name to value
  *   to label
- * @throws {Error} kind `"statfiles"` for a malformed catalog
+ * @throws {Error} kind `"statfiles"` for a malformed catalog, `"limit"`
+ *   over `Options.maxBytes` or `Options.maxCells`
  * @example
  *   def formats as map of string to map of string to string init statfiles.readSas7bcat(fs.readBytes("formats.sas7bcat"), statfiles.options());
  */
@@ -58,6 +77,13 @@ export func readSas7bcat(data as bytes, opts as Options) {
     }
     if (not looksLikeSas7bcat($data)) {
         fail("not a SAS format catalog (no sas7bcat signature)");
+    }
+    checkSize($opts, 0, 0);
+    if (len($data) > $opts.maxBytes) {
+        failLimit(io.sprintf(
+            "a catalog of %d bytes is over %d bytes (maxBytes)",
+            len($data),
+            $opts.maxBytes));
     }
     def head as Sas7Head init sas7Head($data, $opts);
     if ($head.pageCount <= SAS7C_INDEX_PAGE) {
@@ -73,6 +99,9 @@ export func readSas7bcat(data as bytes, opts as Options) {
     }
     def pointers as list of int init [];
     def page as int init $head.headerSize + SAS7C_INDEX_PAGE * $head.pageSize;
+    # the blocks are disjoint parts of the file, so together they are no
+    # longer than it; a chain that loops or overlaps would exceed this
+    def budget as int init len($data);
     def found as list of int init sas7cIndex(
         $data,
         $head,
@@ -98,16 +127,20 @@ export func readSas7bcat(data as bytes, opts as Options) {
         }
     }
     def out as map of string to map of string to string init {};
+    def labels as int init 0;
     def last as int init -1;
     for (def p in lists.sort($pointers)) {
         if ($p == $last) {
             continue;
         }
         $last = $p;
-        def block as bytes init sas7cBlock($data, $head, $p >> 16, $p & 0xFFFF);
+        def links as list of bytes init sas7cBlock($data, $head, $p >> 16, $p & 0xFFFF, $budget);
+        def block as bytes init binary.join($links);
+        $budget = $budget - len($block) - len($links) * sas7cLinkHead($head);
         if (len($block) > 0) {
-            def f as Sas7cFormat init sas7cFormat($block, $head);
-            if ($f.name != "") {
+            def f as Sas7cFormat init sas7cFormat($block, $head, $labels, $opts.maxCells);
+            $labels = $labels + $f.count;
+            if ($f.name != "" and len($f.labels) > 0) {
                 $out[$f.name] = $f.labels;
             }
         }
@@ -165,26 +198,40 @@ func sas7cIndex(
 }
 
 /**
- * Join the links of a block: each link starts with the page and offset of
- * the next one and the length of its own payload.
+ * The size of the head of a block's link.
+ *
+ * @param head {Sas7Head} the header
+ * @return {int} 32 in a 64-bit catalog, else 16
+ */
+func sas7cLinkHead(head as Sas7Head) {
+    if ($head.u64) {
+        return 32;
+    }
+    return 16;
+}
+
+/**
+ * The payloads of the links of a block: each link starts with the page and
+ * offset of the next one and the length of its own payload, and lies inside
+ * its page.
  *
  * @param data {bytes} the catalog
  * @param head {Sas7Head} the header
  * @param page {int} the first link's page, from 1
  * @param pos {int} its offset in the page
- * @return {bytes} the block
+ * @param budget {int} the most bytes the links may take, heads included
+ * @return {list of bytes} the payloads, in order
  */
-func sas7cBlock(data as bytes, head as Sas7Head, page as int, pos as int) {
+func sas7cBlock(data as bytes, head as Sas7Head, page as int, pos as int, budget as int) {
     def parts as list of bytes init [];
-    def links as int init 0;
-    def hl as int init 16;
-    if ($head.u64) {
-        $hl = 32;
-    }
-    while ($page > 0 and $pos > 0 and $page <= $head.pageCount and $links < $head.pageCount) {
-        $links = $links + 1;
+    def hl as int init sas7cLinkHead($head);
+    def used as int init 0;
+    while ($page > 0 and $pos > 0) {
+        if ($page > $head.pageCount or $pos + $hl > $head.pageSize) {
+            fail(io.sprintf("a catalog block link at page %d, offset %d", $page, $pos));
+        }
         def at as int init $head.headerSize + ($page - 1) * $head.pageSize + $pos;
-        need($data, $at, $hl, "a catalog block");
+        def end as int init $at - $pos + $head.pageSize;
         def n as int init 0;
         $page = binary.readUint($head.order, $data, $at, 4);
         if ($head.u64) {
@@ -194,10 +241,16 @@ func sas7cBlock(data as bytes, head as Sas7Head, page as int, pos as int) {
             $pos = binary.readUint($head.order, $data, $at + 4, 2);
             $n = binary.readUint($head.order, $data, $at + 6, 2);
         }
-        need($data, $at + $hl, $n, "a catalog block");
+        if ($at + $hl + $n > $end) {
+            fail("a catalog block link runs past its page");
+        }
+        $used = $used + $hl + $n;
+        if ($used > $budget) {
+            fail("the catalog's blocks are longer than the file (a link chain loops)");
+        }
         $parts[] = binary.slice($data, $at + $hl, $at + $hl + $n);
     }
-    return binary.join($parts);
+    return $parts;
 }
 
 /**
@@ -205,11 +258,14 @@ func sas7cBlock(data as bytes, head as Sas7Head, page as int, pos as int) {
  *
  * @param b {bytes} the block
  * @param head {Sas7Head} the header
- * @return {Sas7cFormat} the format; its name is `""` for a block to skip
- *   (an informat, a block too short to hold a format, one of no entries)
+ * @param seen {int} the labels of the formats read before
+ * @param max {int} the most labels in all (`Options.maxCells`)
+ * @return {Sas7cFormat} the format and how many labels it holds; its name
+ *   is `""` for a block to skip (an informat, a block too short to hold a
+ *   format, one of no entries)
  */
-func sas7cFormat(b as bytes, head as Sas7Head) {
-    def none as Sas7cFormat init Sas7cFormat{name: "", labels: {}};
+func sas7cFormat(b as bytes, head as Sas7Head, seen as int, max as int) {
+    def none as Sas7cFormat init Sas7cFormat{name: "", labels: {}, count: 0};
     def payload as int init 106;
     if (len($b) < $payload) {
         return $none;
@@ -264,6 +320,13 @@ func sas7cFormat(b as bytes, head as Sas7Head) {
     if (len($b) < $payload + $pad or $used == 0 or strings.startsWith($name, "@")) {
         return $none;
     }
+    if ($used > $max - $seen) {
+        failLimit(io.sprintf(
+            "%d value labels with format %s, over %d (maxCells)",
+            $seen + $used,
+            $name,
+            $max));
+    }
     return Sas7cFormat{
         name: strings.upper($name),
         labels: sas7cLabels(
@@ -273,7 +336,8 @@ func sas7cFormat(b as bytes, head as Sas7Head) {
             $used,
             $other,
             $shift,
-            strings.startsWith($name, "$"))
+            strings.startsWith($name, "$")),
+        count: $used
     };
 }
 
@@ -281,8 +345,9 @@ func sas7cFormat(b as bytes, head as Sas7Head) {
  * The value labels of a block: `capacity` value entries, each naming the
  * label it uses, then `used` labels in order. A numeric entry holds the
  * range's start at byte 22 and its end at byte 30, 8-byte big-endian
- * doubles stored so that they sort as integers; a string entry holds the
- * value from byte 22 plus `shift`.
+ * doubles stored so that they sort as integers; a string entry holds a
+ * single value from byte 22 plus `shift`, or a range's start and end from
+ * byte 22. Ranges are left out.
  *
  * @param b {bytes} the entries and labels
  * @param head {Sas7Head} the header
@@ -332,14 +397,22 @@ func sas7cLabels(
         if ($at + 10 > $size) {
             fail("a format block ends inside its labels");
         }
+        # a label record is its type (byte 6) and the text's length (bytes
+        # 8-9), the text and a NUL; type 9 (written for some ranges) holds
+        # the record's length less 6 in bytes 2-3 instead, and no NUL
         def n as int init binary.readUint($order, $b, $at + 8, 2);
-        if ($at + 10 + $n > $size) {
+        def next as int init $at + 11 + $n;
+        if ($b[$at + 6] == SAS7C_LABEL_FIXED) {
+            $n = binary.readUint($order, $b, $at + 2, 2) - 4;
+            $next = $at + 10 + $n;
+        }
+        if ($n < 0 or $at + 10 + $n > $size) {
             fail("a format block ends inside a label");
         }
         def label as string init decodeText(
             binary.slice($b, $at + 10, $at + 10 + $n),
             $head.charset);
-        $at = $at + 11 + $n;
+        $at = $next;
         if ($other > 0 and $i == $other - 1) {
             continue;
         }
@@ -355,13 +428,18 @@ func sas7cLabels(
             if (22 + $shift > $entryEnd - $e or $entryEnd > $size) {
                 fail("a format block ends inside a value entry");
             }
+            if ($b[$e + 6] == SAS7C_CHAR_RANGE or $b[$e + 6] == SAS7C_LONG_RANGE) {
+                # a range of strings: no single key
+                continue;
+            }
             $out[decodeText(binary.slice($b, $e + 22 + $shift, $entryEnd), $head.charset)] = $label;
             continue;
         }
         def start as int init binary.readInt("be", $b, $e + 22, 8);
-        if ($entryEnd >= $e + 38 and $entryEnd <= $size and
+        if ($b[$e + 7] != 0 or $entryEnd >= $e + 38 and $entryEnd <= $size and
             binary.readInt("be", $b, $e + 30, 8) != $start) {
-            # a range of values: no single key
+            # a range of values (LOW, HIGH or an open end set it apart from
+            # a single value even when both ends are equal): no single key
             continue;
         }
         $out[sas7cKey($start)] = $label;

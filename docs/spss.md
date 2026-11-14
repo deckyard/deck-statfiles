@@ -30,6 +30,7 @@ both `.sav` and `.zsav`.
 | variable label | `label` |
 | numeric / string | `type` and `storage`: `numeric` or `string` |
 | string width | `width` in bytes; a very long string (over 255 bytes, stored as segments) is one variable of its full width |
+| number | `width` 8 in a `.sav` / `.zsav` (one 8-byte slot), 0 in a `.por` (a text format) |
 | print format | `format` as SPSS writes it: `F8.2`, `A20`, `DATE11`, `COMMA9` |
 | value labels | `valueLabels`, keyed by `valueKey` (`"1"`, `"2.5"`) or by the string without trailing blanks |
 | missing values | `missingValues`, as `valueKey` texts or trimmed strings |

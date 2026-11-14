@@ -36,8 +36,11 @@ export def const HIGHEST as float init 1.7976931348623157e308;
  * @field storage {string} the file's own storage type: Stata `byte`, `int`,
  *   `long`, `float`, `double`, `str<n>` or `strL`; SPSS and SAS `numeric` or
  *   `string`
- * @field width {int} the stored width of a string variable in bytes, 0 for a
- *   numeric one
+ * @field width {int} the bytes a value takes in the file: a string
+ *   variable's width (0 for a Stata `strL`); a number's stored size, Stata
+ *   1 (`byte`), 2 (`int`), 4 (`long`, `float`) or 8 (`double`), SPSS
+ *   `.sav` / `.zsav` 8, SAS `.sas7bdat` 3 to 8, XPORT 2 to 8; 0 for a number
+ *   of a `.por`, a text format
  * @field format {string} the display format as the file writes it, such as
  *   `%9.0g`, `F8.2` or `DATE9.`; `""` if none
  * @field valueLabels {map of string to string} the value labels, keyed by
@@ -76,8 +79,10 @@ export def struct Variable {
  * @field variables {list of Variable} the variables, in file order
  * @field numbers {list of list of float} a numeric variable's values (0.0
  *   where missing); an empty list for a string variable
- * @field texts {list of list of string} a string variable's values without
- *   trailing blanks; an empty list for a numeric variable
+ * @field texts {list of list of string} a string variable's values: Stata's
+ *   as stored (trailing blanks kept, a `str<n>` cut at its first NUL), SPSS's
+ *   and SAS's without trailing blanks (their padding); an empty list for a
+ *   numeric variable
  * @field missing {list of list of string} each cell's missing code, `""`
  *   when present
  */
@@ -100,11 +105,13 @@ export def struct Dataset {
  * @field encoding {string} the character set of the text, overriding what
  *   the file declares; `""` takes the file's own, or the format's default
  *   (`windows-1252` for Stata before 118 and for SAS, `utf-8` otherwise)
- * @field maxCells {int} the most cells (rows times variables) read; kind
- *   `"limit"` beyond
+ * @field maxCells {int} the most cells (rows times variables) read, and the
+ *   most value labels `readSas7bcat` reads; kind `"limit"` beyond
  * @field maxBytes {int} the most bytes compressed SPSS cases unpack to,
  *   both the zlib blocks of a `.zsav` and the bytecode of a `.sav` or
- *   `.zsav` in the uncompressed layout; kind `"limit"` beyond
+ *   `.zsav` in the uncompressed layout, the rows of a compressed
+ *   `.sas7bdat` unpack to, and the largest `.sas7bcat`; kind `"limit"`
+ *   beyond
  */
 export def struct Options {
     encoding as string,
@@ -206,6 +213,17 @@ func decodeText(b as bytes, charset as string) {
     if ($end < len($b)) {
         $b = binary.slice($b, 0, $end);
     }
+    return decodeBytes($b, $charset);
+}
+
+/**
+ * Decode text in a character set as it is, blanks and NULs included.
+ *
+ * @param b {bytes} the text
+ * @param charset {string} an `encoding` codec name, or `utf-8`
+ * @return {string} the text
+ */
+func decodeBytes(b as bytes, charset as string) {
     def s as string;
     if ($charset == "utf-8") {
         try {

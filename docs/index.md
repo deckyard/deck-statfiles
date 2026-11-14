@@ -27,7 +27,7 @@ first bytes.
 def ds as statfiles.Dataset init statfiles.read(fs.readBytes("survey.sav"));
 io.printf("%s, %d rows\n", $ds.format, $ds.rowCount);
 for (def v in $ds.variables) {
-    io.printf("%-10s %-8s %s\n", $v.name, $v.type, $v.label);
+    io.printf("%s|pad=10 %s|pad=8 %s\n", $v.name, $v.type, $v.label);
 }
 ```
 
@@ -41,9 +41,12 @@ others; an XPORT file with several datasets is read with
 A `Dataset` holds its cells by column: entry `i` of `numbers`, `texts` and
 `missing` belongs to `variables[i]`. A numeric variable's values are
 `float`, whatever the file stored (Stata's `byte` to `double`, SAS's
-shortened numbers); a string variable's values have their trailing blanks
-removed. Variables keep their label, display format, value labels and, in
-SPSS, the declared missing values.
+shortened numbers). A string variable's values keep their trailing blanks
+in Stata, where blanks are data, and lose them in SPSS and SAS, whose
+fixed-width fields are padded with blanks. Variables keep their label,
+display format, value labels and, in SPSS, the declared missing values;
+`width` is the bytes a value takes in the file (a number's stored size,
+0 in a `.por`).
 
 ```jennifer
 def ages as list of float init statfiles.present($ds, "age");
@@ -94,6 +97,11 @@ bounds every reader before it allocates, and `Options.maxBytes` (256 MiB)
 the size compressed SPSS cases unpack to (a few bytes of bytecode can
 stand for kilobytes of blank long strings).
 
+A read dataset takes about 1.2 KB of memory per cell (the interpreter's
+values, whatever the format), so a file of 20 million cells, the
+`maxCells` default, needs about 23 GB. Lower `maxCells` to what the
+machine can hold.
+
 ```jennifer
 try {
     def ds as statfiles.Dataset init statfiles.read($data);
@@ -107,8 +115,9 @@ try {
 The readers are pure Jennifer, so a large file takes a while: 10,000 rows
 of 20 variables (16 numeric, 4 string) read in about 0.5 s from a Stata
 file, 0.6 s from an uncompressed `.sav`, 0.7 s from an uncompressed
-`.sas7bdat`, 1.2 s from a compressed `.sav`, a `.zsav` or an XPORT file,
-2 to 3 s from a compressed `.sas7bdat`, and 8 s from a `.por`, whose
+`.sas7bdat` (numbers of 3 to 8 bytes alike), 1.2 s from a compressed
+`.sav`, a `.zsav` or an XPORT file,
+2 to 3.5 s from a compressed `.sas7bdat`, and 8 s from a `.por`, whose
 base-30 numbers are decoded one digit at a time.
 
 ## Not covered

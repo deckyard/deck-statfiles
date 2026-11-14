@@ -220,6 +220,13 @@ def const SAS7_COMP_ROW_MOVED as int init 6;
 def const SAS7_COMP_NONE_UNREFERENCED as int init 9;
 def const SAS7_COMP_ROW_UNREFERENCED as int init 13;
 
+# The farthest back an RDC copy reaches (3 + 15 + 255 * 16).
+def const SAS7_RDC_WINDOW as int init 4098;
+
+# The missing code of a NaN whose tag byte is stored as 0 until it is told
+# apart from an infinity.
+def const SAS7_MAYBE_INFINITE as string init "?";
+
 # The leading zero bits of a 4-bit value.
 def const SAS7_CLZ4 as list of int init [4, 3, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -291,6 +298,15 @@ def struct Sas7Meta {
 def struct Sas7Column {
     numbers as list of float,
     missing as list of string
+};
+
+/*
+ * The NaNs of the numeric columns marked (sas7Marks): the marked rows, and
+ * per byte of a row the column whose top bytes start there, -1 for none.
+ */
+def struct Sas7Marks {
+    marked as bytes,
+    owner as list of int
 };
 
 /**
@@ -551,14 +567,19 @@ func sas7Pages(data as bytes, head as Sas7Head) {
                         $size));
                 }
                 if ($comp == SAS7_COMP_NONE or $comp == SAS7_COMP_NONE_MOVED) {
-                    if ($size < $head.word + 2) {
+                    if ($size >= $head.word) {
+                        $kind = sas7Kind($data, $base + $off, $head);
+                    } elseif ($data[$at + 2 * $head.word + 1] != 0) {
+                        # a row too short to hold a signature (ReadStat
+                        # stores a row that does not compress as it is)
+                        $kind = SAS7_SH_DATA;
+                    } else {
                         fail(io.sprintf(
                             "subheader %d of page %d is %d bytes long",
                             $i,
                             $page,
                             $size));
                     }
-                    $kind = sas7Kind($data, $base + $off, $head);
                 }
                 $off = $base + $off;
             }
@@ -821,8 +842,11 @@ func sas7Meta(data as bytes, head as Sas7Head, pages as Sas7Pages) {
  * @param what {string} the subheader, for the message
  */
 func sas7Remainder(data as bytes, at as int, size as int, head as Sas7Head, what as string) {
+    if ($size < 20 + 2 * ($head.word - 4)) {
+        fail(io.sprintf("a %s subheader whose length does not match (offset %d)", $what, $at));
+    }
     def rest as int init binary.readUint($head.order, $data, $at + $head.word, 2);
-    if ($rest != $size - 4 - 2 * $head.word or $size < 20 + 2 * ($head.word - 4)) {
+    if ($rest != $size - 4 - 2 * $head.word) {
         fail(io.sprintf("a %s subheader whose length does not match (offset %d)", $what, $at));
     }
 }
@@ -936,7 +960,6 @@ func sas7Variables(m as Sas7Meta, charset as string) {
         if ($m.numeric[$i]) {
             $v.type = "numeric";
             $v.storage = "numeric";
-            $v.width = 0;
         }
         $out[] = $v;
     }
@@ -1306,6 +1329,7 @@ func sas7Rle(data as bytes, from as int, end as int, rl as int) {
  * @return {bytes} the row
  */
 func sas7Rdc(data as bytes, from as int, end as int, rl as int) {
+    def older as list of bytes init [];
     def parts as list of bytes init [];
     def out as int init 0;
     def at as int init $from;
@@ -1379,16 +1403,25 @@ func sas7Rdc(data as bytes, from as int, end as int, rl as int) {
             if ($back > $out) {
                 fail("a compressed row copies from before its start");
             }
+            # the copy reads the last `back` (at most 4098) bytes: join the
+            # recent parts into a window, and move all but its last 4098
+            # bytes to `older` once it grows, so a copy costs no more than
+            # the window, not the row so far
             def sofar as bytes init binary.join($parts);
+            def from2 as int init len($sofar) - $back;
             $parts = [$sofar];
+            if (len($sofar) > 2 * SAS7_RDC_WINDOW) {
+                $older[] = binary.slice($sofar, 0, len($sofar) - SAS7_RDC_WINDOW);
+                $parts = [binary.slice($sofar, len($sofar) - SAS7_RDC_WINDOW, len($sofar))];
+            }
             if ($copy <= $back) {
-                $parts[] = binary.slice($sofar, $out - $back, $out - $back + $copy);
+                $parts[] = binary.slice($sofar, $from2, $from2 + $copy);
             } else {
                 # an overlapping copy repeats the bytes it has just written
                 def done as int init 0;
                 while ($done < $copy) {
                     def n as int init math.min($copy - $done, $back);
-                    $parts[] = binary.slice($sofar, $out - $back, $out - $back + $n);
+                    $parts[] = binary.slice($sofar, $from2, $from2 + $n);
                     $done = $done + $n;
                 }
             }
@@ -1401,7 +1434,8 @@ func sas7Rdc(data as bytes, from as int, end as int, rl as int) {
     if ($out != $rl) {
         fail(io.sprintf("a compressed row unpacks to %d bytes, not %d", $out, $rl));
     }
-    return binary.join($parts);
+    $older[] = binary.join($parts);
+    return binary.join($older);
 }
 
 /**
@@ -1427,7 +1461,11 @@ func sas7Tag(b as int) {
 }
 
 /**
- * Decode every column out of the row buffer.
+ * Decode every column out of the row buffer. Numbers are read in bulk:
+ * the top two bytes of every NaN (a missing value) are cleared in a copy
+ * of the buffer (sas7Clean), so `readFloats` reads each 8-byte column in
+ * one call and sas7ShortColumns the shorter ones; then one pass over the
+ * NaNs sets their code and a 0.0.
  *
  * @param flat {bytes} the rows
  * @param head {Sas7Head} the header
@@ -1451,8 +1489,14 @@ func sas7Decode(
             $present[] = "";
         }
     }
-    def nan as list of list of int init [];
+    def marks as Sas7Marks init Sas7Marks{marked: binary.make(0), owner: []};
+    def clean as bytes init $flat;
+    if ($rows > 0 and $m.columnCount > 0) {
+        $marks = sas7Marks($flat, $m, $head.order);
+        $clean = sas7Clean($flat, $marks.marked, $m.rowLength);
+    }
     for (def i in 0..$m.columnCount) {
+        $missing[] = $present;
         if (not $m.numeric[$i]) {
             $numbers[] = [];
             $texts[] = xptTexts(
@@ -1462,74 +1506,62 @@ func sas7Decode(
                 $m.widths[$i],
                 $m.rowLength,
                 $head.charset);
-            $missing[] = $present;
             continue;
         }
+        $texts[] = [];
         if ($rows > 0 and $m.widths[$i] == 8) {
-            def vals as list of float;
-            def finite as bool init true;
-            try {
-                $vals = binary.readFloats(
-                    $head.order,
-                    $flat,
-                    $m.offsets[$i],
-                    $rows,
-                    8,
-                    $m.rowLength);
-            } catch (e) {
-                $finite = false;
-            }
-            if ($finite) {
-                $numbers[] = $vals;
-                $texts[] = [];
-                $missing[] = $present;
+            $numbers[] = sas7Floats(
+                $clean,
+                $head.order,
+                $m.offsets[$i],
+                $rows,
+                $m.rowLength,
+                $variables[$i].name);
+        } else {
+            $numbers[] = [];
+        }
+    }
+    if ($rows > 0 and $m.columnCount > 0) {
+        $numbers = sas7ShortColumns($numbers, $clean, $flat, $head.order, $m, $rows, $variables);
+        # the NaNs: their code from the tag byte (the third from the top), and
+        # 0.0 for the number read from the cleared bytes
+        def codes as list of string init sas7MissingCodes();
+        def tag as int init -1;
+        if ($head.order == "be") {
+            $tag = 2;
+        }
+        def rl as int init $m.rowLength;
+        def needle as bytes init binary.make(2, 0xAA);
+        $needle[1] = 0x55;
+        def marked as bytes init $marks.marked;
+        def owner as list of int init $marks.owner;
+        def at as int init binary.indexOf($marked, $needle);
+        while ($at >= 0) {
+            $missing[$owner[$at % $rl]][$at // $rl] = $codes[$flat[$at + $tag]];
+            $numbers[$owner[$at % $rl]][$at // $rl] = 0.0;
+            $at = binary.indexOf($marked, $needle, $at + 2);
+        }
+        # a tag byte of 0 is `.`, or an infinity (an error); tell them apart
+        # one cell at a time
+        for (def i in 0..$m.columnCount) {
+            if (not $m.numeric[$i] or not lists.contains($missing[$i], SAS7_MAYBE_INFINITE)) {
                 continue;
             }
-            if (len($nan) == 0) {
-                $nan = sas7NanRows($flat, $m, $head.order, $rows);
-            }
-            # read the missing values' codes, then make them finite in the
-            # buffer (top byte cleared) so the column reads in one call
-            def miss as list of string init $present;
-            for (def r in $nan[$i]) {
-                def at as int init $r * $m.rowLength + $m.offsets[$i];
-                def raw as int init binary.readInt($head.order, $flat, $at, 8);
-                if (($raw & 0xFFFFFFFFFFFFF) == 0) {
-                    fail("an infinite value of " + $variables[$i].name);
-                }
-                $miss[$r] = sas7Tag((~ ($raw >> 40)) & 0xFF);
-                if ($head.order == "le") {
-                    $flat[$at + 7] = 0;
-                } else {
-                    $flat[$at] = 0;
+            for (def r in 0..$rows) {
+                if ($missing[$i][$r] == SAS7_MAYBE_INFINITE) {
+                    def col as Sas7Column init sas7Numbers(
+                        sas7RawColumn(
+                            $flat,
+                            $r * $rl + $m.offsets[$i],
+                            1,
+                            $m.widths[$i],
+                            $rl,
+                            $head.order),
+                        $variables[$i].name);
+                    $missing[$i][$r] = $col.missing[0];
                 }
             }
-            try {
-                $vals = binary.readFloats(
-                    $head.order,
-                    $flat,
-                    $m.offsets[$i],
-                    $rows,
-                    8,
-                    $m.rowLength);
-            } catch (e) {
-                # only when columns overlap, which no writer does
-                fail("numeric column " + $variables[$i].name + " overlaps another one");
-            }
-            for (def r in $nan[$i]) {
-                $vals[$r] = 0.0;
-            }
-            $numbers[] = $vals;
-            $texts[] = [];
-            $missing[] = $miss;
-            continue;
         }
-        def col as Sas7Column init sas7Numbers(
-            sas7RawColumn($flat, $m.offsets[$i], $rows, $m.widths[$i], $m.rowLength, $head.order),
-            $variables[$i].name);
-        $numbers[] = $col.numbers;
-        $texts[] = [];
-        $missing[] = $col.missing;
     }
     return Dataset{
         format: "sas7bdat",
@@ -1546,20 +1578,35 @@ func sas7Decode(
 }
 
 /**
- * The rows where each numeric column holds a NaN or an infinity (exponent
- * bits all set). Two bulk operations over the row buffer turn the top two
- * bytes of every such value into the pair 0xAA 0x55 and every other byte
- * into something else (0 outside the numeric columns' top bytes), so
- * `binary.indexOf` finds them one after another.
+ * The missing code of every tag byte as stored (the complement of the
+ * tag, see sas7Tag); a stored 0 is SAS7_MAYBE_INFINITE, `.` unless the
+ * value is an infinity.
+ *
+ * @return {list of string} 256 codes
+ */
+func sas7MissingCodes() {
+    def out as list of string init [SAS7_MAYBE_INFINITE];
+    for (def b in 1..256) {
+        $out[] = sas7Tag((~ $b) & 0xFF);
+    }
+    return $out;
+}
+
+/**
+ * Mark the NaNs and infinities (exponent bits all set) of the numeric
+ * columns. Two bulk operations over the row buffer turn the top two bytes
+ * of every such value into the pair 0xAA 0x55 and every other byte into
+ * something else (0 outside the numeric columns' top bytes; the byte after
+ * a top byte can never be 0xAA), so `binary.indexOf` and `binary.split`
+ * find exactly them.
  *
  * @param flat {bytes} the rows
  * @param m {Sas7Meta} the metadata
  * @param order {string} `le` or `be`
- * @param rows {int} the number of rows
- * @return {list of list of int} per column, its rows in order (empty for a
- *   string column)
+ * @return {Sas7Marks} the marked buffer, and per byte of a row the column
+ *   whose top bytes start there (-1 for none)
  */
-func sas7NanRows(flat as bytes, m as Sas7Meta, order as string, rows as int) {
+func sas7Marks(flat as bytes, m as Sas7Meta, order as string) {
     def rl as int init $m.rowLength;
     def andKey as bytes init binary.make($rl);
     def xorKey as bytes init binary.make($rl);
@@ -1567,9 +1614,7 @@ func sas7NanRows(flat as bytes, m as Sas7Meta, order as string, rows as int) {
     for (def k in 0..$rl) {
         $owner[] = -1;
     }
-    def out as list of list of int init [];
     for (def i in 0..$m.columnCount) {
-        $out[] = [];
         if (not $m.numeric[$i]) {
             continue;
         }
@@ -1587,19 +1632,184 @@ func sas7NanRows(flat as bytes, m as Sas7Meta, order as string, rows as int) {
         $xorKey[$top + 1] = $masks[1] ^ 0x55;
         $owner[$top] = $i;
     }
-    def marked as bytes init binary.bitXor(binary.bitAnd($flat, $andKey), $xorKey);
+    return Sas7Marks{marked: binary.bitXor(binary.bitAnd($flat, $andKey), $xorKey), owner: $owner};
+}
+
+/**
+ * A copy of the rows with the top two bytes of every NaN and infinity
+ * cleared, so that every number reads as a finite double. The marks'
+ * pairs are swapped (0xAA 0x55 to 0x55 0xAA) by splitting and joining;
+ * XOR with the marks then sets exactly their bytes, whose complement is
+ * the mask. The rows go in chunks of at most 1 MiB, so a chunk splits into
+ * fewer parts than `binary.split` allows (a pair never spans two rows).
+ *
+ * @param flat {bytes} the rows
+ * @param marked {bytes} from sas7Marks
+ * @param rl {int} the row length
+ * @return {bytes} the cleared rows
+ */
+func sas7Clean(flat as bytes, marked as bytes, rl as int) {
     def needle as bytes init binary.make(2, 0xAA);
     $needle[1] = 0x55;
-    def at as int init binary.indexOf($marked, $needle);
-    while ($at >= 0) {
-        def i as int init $owner[$at % $rl];
-        if ($i < 0) {
-            fail("internal: a NaN mark outside a numeric column");
-        }
-        $out[$i][] = $at // $rl;
-        $at = binary.indexOf($marked, $needle, $at + 2);
+    if (not binary.contains($marked, $needle)) {
+        return $flat;
     }
-    return $out;
+    def swapped as bytes init binary.make(2, 0x55);
+    $swapped[1] = 0xAA;
+    def step as int init math.max(1, 1048576 // $rl) * $rl;
+    def parts as list of bytes init [];
+    def at as int init 0;
+    while ($at < len($marked)) {
+        def end as int init math.min($at + $step, len($marked));
+        def chunk as bytes init binary.slice($marked, $at, $end);
+        $parts[] = binary.join(binary.split($chunk, $needle), $swapped);
+        $at = $end;
+    }
+    def set as bytes init binary.bitXor($marked, binary.join($parts));
+    return binary.bitAnd($flat, binary.bitNot($set));
+}
+
+/**
+ * Decode every numeric column of 3 to 7 bytes in bulk. Such a number is a
+ * double whose low-order bytes were cut off: the stored bytes are its top
+ * ones (at the field's end in a little-endian file, at its start in a
+ * big-endian one). The columns go into groups whose 8-byte windows (the
+ * field and the bytes that would complete it to a double) do not overlap,
+ * also across the end of a row. Per group, one `bitAnd` with a row-length
+ * mask keeps only the group's fields, so each window holds the field and
+ * zeros; one `readFloats` per column reads the windows as doubles, the
+ * same values a cell by cell conversion (sas7Numbers) gives. A window
+ * that starts before the first row or ends after the last one is
+ * converted on its own, as are the columns of a row shorter than 8 bytes.
+ *
+ * @param numbers {list of list of float} per column, its numbers so far
+ * @param clean {bytes} the rows, NaNs cleared (sas7Clean)
+ * @param flat {bytes} the rows as stored
+ * @param order {string} `le` or `be`
+ * @param m {Sas7Meta} the metadata
+ * @param rows {int} the number of rows, at least 1
+ * @param variables {list of Variable} the variables, for messages
+ * @return {list of list of float} the numbers, those columns filled in
+ *   (a NaN's number is left to the caller)
+ */
+func sas7ShortColumns(
+    numbers as list of list of float,
+    clean as bytes,
+    flat as bytes,
+    order as string,
+    m as Sas7Meta,
+    rows as int,
+    variables as list of Variable) {
+    def rl as int init $m.rowLength;
+    def n as int init $m.columnCount;
+    # each column's window start, and the short columns in window order
+    def starts as list of int init [];
+    def keys as list of int init [];
+    for (def i in 0..$n) {
+        def ws as int init $m.offsets[$i];
+        if ($order == "le") {
+            $ws = $m.offsets[$i] + $m.widths[$i] - 8;
+        }
+        $starts[] = $ws;
+        if ($m.numeric[$i] and $m.widths[$i] < 8) {
+            $keys[] = ($ws + 8) * $n + $i;
+        }
+    }
+    # first fit: a group takes a column whose window starts after the
+    # group's last one ends and ends before its first one starts in the
+    # next row
+    def firsts as list of int init [];
+    def lasts as list of int init [];
+    def masks as list of bytes init [];
+    def members as list of list of int init [];
+    for (def key in lists.sort($keys)) {
+        def i as int init $key % $n;
+        def ws as int init $starts[$i];
+        if ($rl < 8) {
+            def all as Sas7Column init sas7Numbers(
+                sas7RawColumn($flat, $m.offsets[$i], $rows, $m.widths[$i], $rl, $order),
+                $variables[$i].name);
+            $numbers[$i] = $all.numbers;
+            continue;
+        }
+        def g as int init 0;
+        while ($g < len($firsts) and ($lasts[$g] > $ws or $ws + 8 > $firsts[$g] + $rl)) {
+            $g = $g + 1;
+        }
+        if ($g == len($firsts)) {
+            $firsts[] = $ws;
+            $lasts[] = $ws;
+            $masks[] = binary.make($rl);
+            $members[] = [];
+        }
+        $lasts[$g] = $ws + 8;
+        $members[$g][] = $i;
+        for (def k in $m.offsets[$i]..$m.offsets[$i] + $m.widths[$i]) {
+            $masks[$g][$k] = 0xFF;
+        }
+    }
+    for (def g in 0..len($members)) {
+        def masked as bytes init binary.bitAnd($clean, $masks[$g]);
+        for (def i in $members[$g]) {
+            def ws as int init $starts[$i];
+            # the rows whose window lies inside the buffer
+            def r0 as int init 0;
+            def r1 as int init $rows;
+            if ($ws < 0) {
+                $r0 = 1;
+            }
+            if ($ws + 8 > $rl) {
+                $r1 = $rows - 1;
+            }
+            $numbers[$i] = sas7Floats(
+                $masked,
+                $order,
+                $r0 * $rl + $ws,
+                $r1 - $r0,
+                $rl,
+                $variables[$i].name);
+            if ($r0 == 1) {
+                def first as Sas7Column init sas7Numbers(
+                    sas7RawColumn($flat, $m.offsets[$i], 1, $m.widths[$i], $rl, $order),
+                    $variables[$i].name);
+                $numbers[$i] = lists.concat($first.numbers, $numbers[$i]);
+            }
+            if ($r1 == $rows - 1) {
+                def last as Sas7Column init sas7Numbers(
+                    sas7RawColumn($flat, $r1 * $rl + $m.offsets[$i], 1, $m.widths[$i], $rl, $order),
+                    $variables[$i].name);
+                $numbers[$i] = lists.concat($numbers[$i], $last.numbers);
+            }
+        }
+    }
+    return $numbers;
+}
+
+/**
+ * Read a column of doubles whose NaNs have been made finite.
+ *
+ * @param b {bytes} the buffer
+ * @param order {string} `le` or `be`
+ * @param at {int} the first value's offset
+ * @param count {int} the number of values
+ * @param stride {int} the row length
+ * @param name {string} the variable, for the message
+ * @return {list of float} the values
+ */
+func sas7Floats(
+    b as bytes,
+    order as string,
+    at as int,
+    count as int,
+    stride as int,
+    name as string) {
+    try {
+        return binary.readFloats($order, $b, $at, $count, 8, $stride);
+    } catch (e) {
+        # only when columns overlap, which no writer does
+        fail("numeric column " + $name + " overlaps another one");
+    }
+    return [];
 }
 
 /**

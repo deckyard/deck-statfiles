@@ -1002,7 +1002,7 @@ export func readSav(data as bytes, opts as Options) {
             label: decodeText($raw.label, $cs),
             type: "numeric",
             storage: "numeric",
-            width: 0,
+            width: 8,
             format: savFormat($raw.print),
             valueLabels: {},
             missingValues: [],

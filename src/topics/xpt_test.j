@@ -108,7 +108,7 @@ func testXptV5Variables() {
     testing.assertEqual($id.label, "Identifier");
     testing.assertEqual($id.type, "numeric");
     testing.assertEqual($id.storage, "numeric");
-    testing.assertEqual($id.width, 0);
+    testing.assertEqual($id.width, 8);
     testing.assertEqual($id.format, "8.");
     testing.assertEqual(variable($ds, "height").format, "8.2");
     testing.assertEqual(variable($ds, "born").format, "DATE9.");
@@ -182,6 +182,14 @@ func testXptShortNumbers() {
         present($ds, "t5"),
         [3.140625, -0.09999999986030161, 65536.25, 0.0009999999992942321]);
     testing.assertEqual(present($ds, "t2"), [0.5, 2.0, -1.0]);
+    # a number's width is its stored size
+    def widths as list of int init [];
+    for (def v in $ds.variables) {
+        if ($v.type == "numeric") {
+            $widths[] = $v.width;
+        }
+    }
+    testing.assertEqual($widths, [8, 3, 5, 2]);
 }
 
 func testXptEncoding() {

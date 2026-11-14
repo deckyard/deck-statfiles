@@ -39,7 +39,7 @@ Formats 106, 107, 109, 112 and 116 were never released and are refused.
 | release number | `version`, as text (`"118"`); `format` is `"dta"` |
 | dataset label | `label` |
 | variable name, label, display format | `name`, `label`, `format` (such as `%9.0g`, `%td`) |
-| `byte`, `int`, `long`, `float`, `double` | `type` `"numeric"`, `storage` the Stata type, values in `numbers[i]` |
+| `byte`, `int`, `long`, `float`, `double` | `type` `"numeric"`, `storage` the Stata type, `width` its size (1, 2, 4, 4, 8 bytes), values in `numbers[i]` |
 | `str1` to `str2045` | `type` `"string"`, `storage` `str<n>`, `width` n bytes, values in `texts[i]` |
 | `strL` | `type` `"string"`, `storage` `strL`, `width` 0 |
 | value label attached to a variable | `valueLabels`, keyed by `valueKey` of the value |
@@ -47,7 +47,11 @@ Formats 106, 107, 109, 112 and 116 were never released and are refused.
 A `float` keeps its single-precision value (`1.1` reads as
 `1.100000023841858`). Display formats are returned as written; dates stay
 numbers (days or milliseconds since 1960-01-01, as the format says).
-String values lose trailing blanks. `missingValues` and `missingRange` stay
+String values keep their trailing blanks (`"a "` reads as `"a "`, as in
+pandas and ReadStat): a `str<n>` value ends at its first NUL or the
+field's end, and a strL is read as stored (an ASCII strL without its
+closing NUL). Variable and value labels lose trailing blanks.
+`missingValues` and `missingRange` stay
 empty: Stata has no declared missing values. Characteristics, notes, the
 sort order and the timestamp are skipped.
 

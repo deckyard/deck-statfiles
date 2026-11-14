@@ -213,7 +213,7 @@ func testSas7Cars() {
         ]);
     sas7ExpectVariables($ds, "formats", ["", "", "", ""]);
     sas7ExpectVariables($ds, "types", ["numeric", "numeric", "numeric", "numeric"]);
-    sas7ExpectVariables($ds, "widths", ["0", "0", "0", "0"]);
+    sas7ExpectVariables($ds, "widths", ["8", "3", "8", "4"]);
     sas7ExpectRow($ds, 0, ["n:18.0", "n:8.0", "n:307.0", "n:3504.0"]);
     sas7ExpectRow($ds, 196, ["n:33.0", "n:4.0", "n:91.0", "n:1795.0"]);
     sas7ExpectRow($ds, 391, ["n:31.0", "n:4.0", "n:119.0", "n:2720.0"]);
@@ -302,7 +302,7 @@ func testSas7BigEndianRle() {
     sas7ExpectVariables(
         $ds,
         "widths",
-        ["0", "9", "0", "0", "0", "9", "0", "0", "0", "9", "0", "0", "0", "5", "0", "0", "0"]);
+        ["8", "9", "8", "8", "8", "9", "8", "8", "8", "9", "8", "8", "8", "5", "8", "8", "8"]);
     sas7ExpectRow(
         $ds,
         0,
@@ -498,7 +498,7 @@ func testSas7BigEndian64() {
     sas7ExpectVariables(
         $ds,
         "widths",
-        ["0", "9", "0", "0", "0", "9", "0", "0", "0", "9", "0", "0", "0", "5", "0", "0", "0"]);
+        ["8", "9", "8", "8", "8", "9", "8", "8", "8", "9", "8", "8", "8", "5", "8", "8", "8"]);
     sas7ExpectRow(
         $ds,
         0,
@@ -628,7 +628,7 @@ func testSas7Rle64() {
     sas7ExpectVariables($ds, "labels", ["", "", "", "", ""]);
     sas7ExpectVariables($ds, "formats", ["$CHAR6.", "16.3", "DATETIME22.3", "7.", "E8601DA."]);
     sas7ExpectVariables($ds, "types", ["string", "numeric", "numeric", "numeric", "numeric"]);
-    sas7ExpectVariables($ds, "widths", ["6", "0", "0", "0", "0"]);
+    sas7ExpectVariables($ds, "widths", ["6", "8", "8", "8", "8"]);
     sas7ExpectRow(
         $ds,
         0,
@@ -653,7 +653,7 @@ func testSas7ZeroRows() {
     sas7ExpectVariables($ds, "labels", ["", ""]);
     sas7ExpectVariables($ds, "formats", ["", ""]);
     sas7ExpectVariables($ds, "types", ["string", "numeric"]);
-    sas7ExpectVariables($ds, "widths", ["3", "0"]);
+    sas7ExpectVariables($ds, "widths", ["3", "8"]);
     sas7ExpectMissing($ds, [], []);
 }
 
@@ -719,7 +719,7 @@ func testSas7AmdPage() {
     sas7ExpectVariables(
         $ds,
         "widths",
-        ["1", "0", "0", "0", "0", "0", "0", "0", "0", "1", "1", "0", "1", "1", "0", "0"]);
+        ["1", "8", "8", "8", "8", "8", "8", "8", "8", "1", "1", "8", "1", "1", "8", "8"]);
     sas7ExpectRow(
         $ds,
         0,
@@ -808,7 +808,7 @@ func testSas7RdcFile() {
         $ds,
         "types",
         ["string", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"]);
-    sas7ExpectVariables($ds, "widths", ["1", "0", "0", "0", "0", "0", "0"]);
+    sas7ExpectVariables($ds, "widths", ["1", "8", "8", "8", "8", "8", "8"]);
     sas7ExpectRow(
         $ds,
         0,
@@ -847,7 +847,7 @@ func testSas7SpecialMissing() {
             "numeric",
             "numeric"
         ]);
-    sas7ExpectVariables($ds, "widths", ["0", "0", "0", "0", "0", "0", "0", "0", "0"]);
+    sas7ExpectVariables($ds, "widths", ["8", "8", "8", "8", "8", "8", "8", "8", "8"]);
     sas7ExpectRow($ds, 0, ["m:.a", "m:.b", "m:.c", "m:.x", "m:.y", "m:.z", "m:._", "m:.", "n:1.0"]);
     sas7ExpectMissing(
         $ds,
@@ -868,7 +868,7 @@ func testSas7MovedRow() {
     sas7ExpectVariables($ds, "labels", ["", "", ""]);
     sas7ExpectVariables($ds, "formats", ["", "", ""]);
     sas7ExpectVariables($ds, "types", ["numeric", "string", "string"]);
-    sas7ExpectVariables($ds, "widths", ["0", "20", "2000"]);
+    sas7ExpectVariables($ds, "widths", ["8", "20", "2000"]);
     sas7ExpectRow($ds, 0, ["n:1.0", "s:CATEGORY_1", "s:"]);
     sas7ExpectRow(
         $ds,
@@ -895,7 +895,7 @@ func testSas7MovedCompressedRow() {
     sas7ExpectVariables($ds, "labels", ["", "", ""]);
     sas7ExpectVariables($ds, "formats", ["", "", ""]);
     sas7ExpectVariables($ds, "types", ["numeric", "string", "string"]);
-    sas7ExpectVariables($ds, "widths", ["0", "20", "2000"]);
+    sas7ExpectVariables($ds, "widths", ["8", "20", "2000"]);
     sas7ExpectRow($ds, 0, ["n:1.0", "s:CATEGORY_1", "s:"]);
     sas7ExpectRow(
         $ds,
@@ -922,7 +922,7 @@ func testSas7DeletedCompressedRow() {
     sas7ExpectVariables($ds, "labels", ["", "", "", ""]);
     sas7ExpectVariables($ds, "formats", ["BEST8.", "BEST8.", "BEST8.", "BEST8."]);
     sas7ExpectVariables($ds, "types", ["numeric", "numeric", "numeric", "numeric"]);
-    sas7ExpectVariables($ds, "widths", ["0", "0", "0", "0"]);
+    sas7ExpectVariables($ds, "widths", ["8", "8", "8", "8"]);
     sas7ExpectRow($ds, 0, ["n:1.0", "n:2.0", "n:3.0", "n:4.0"]);
     sas7ExpectRow($ds, 1, ["n:5.0", "n:6.0", "n:7.0", "n:8.0"]);
     sas7ExpectRow($ds, 2, ["n:55.0", "n:66.0", "n:77.0", "n:88.0"]);
@@ -948,7 +948,7 @@ func testSas7DeletedPageRow() {
         $ds,
         "types",
         ["numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"]);
-    sas7ExpectVariables($ds, "widths", ["0", "0", "0", "0", "0", "0", "0", "0"]);
+    sas7ExpectVariables($ds, "widths", ["8", "8", "8", "8", "8", "8", "8", "8"]);
     sas7ExpectRow(
         $ds,
         0,
@@ -1004,7 +1004,7 @@ func testSas7Tagged() {
     sas7ExpectVariables($ds, "labels", [""]);
     sas7ExpectVariables($ds, "formats", ["XFMT."]);
     sas7ExpectVariables($ds, "types", ["numeric"]);
-    sas7ExpectVariables($ds, "widths", ["0"]);
+    sas7ExpectVariables($ds, "widths", ["8"]);
     sas7ExpectRow($ds, 0, ["n:1.0"]);
     sas7ExpectRow($ds, 4, ["n:5.0"]);
     sas7ExpectRow($ds, 5, ["m:.a"]);
@@ -1040,7 +1040,7 @@ func testSas7Hadley() {
         $ds,
         "types",
         ["numeric", "numeric", "string", "numeric", "numeric", "numeric", "numeric"]);
-    sas7ExpectVariables($ds, "widths", ["0", "0", "8", "0", "0", "0", "0"]);
+    sas7ExpectVariables($ds, "widths", ["8", "8", "8", "8", "8", "8", "8"]);
     sas7ExpectRow($ds, 0, ["n:1.0", "n:1.0", "s:f", "n:1.0", "n:1.0", "n:5.0", "n:1.0"]);
     sas7ExpectRow($ds, 3, ["n:4.0", "n:2.0", "s:", "n:3.0", "n:1.0", "m:.", "n:3.0"]);
     sas7ExpectRow($ds, 4, ["n:5.0", "n:1.0", "s:m", "n:4.0", "n:5.0", "n:2.0", "n:4.0"]);
@@ -1070,7 +1070,7 @@ func testSas7WidthsBigEndian() {
         $ds,
         "types",
         ["numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "string"]);
-    sas7ExpectVariables($ds, "widths", ["0", "0", "0", "0", "0", "0", "12"]);
+    sas7ExpectVariables($ds, "widths", ["3", "4", "5", "6", "7", "8", "12"]);
     sas7ExpectRow(
         $ds,
         0,
@@ -1111,7 +1111,7 @@ func testSas7WidthsLittleEndianRle() {
         $ds,
         "types",
         ["numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "string"]);
-    sas7ExpectVariables($ds, "widths", ["0", "0", "0", "0", "0", "0", "12"]);
+    sas7ExpectVariables($ds, "widths", ["3", "4", "5", "6", "7", "8", "12"]);
     sas7ExpectRow(
         $ds,
         0,
@@ -1129,6 +1129,181 @@ func testSas7WidthsLittleEndianRle() {
         ["n:351.0", "n:-231.0", "n:-15453.0", "n:-800.75", "n:-4119.5", "n:81.72", "s:alpha"]);
     sas7ExpectMissing($ds, [".", "._", ".z"], [12, 6, 6]);
 }
+
+func testSas7ShortRows() {
+    # rows that did not shrink are stored uncompressed, as subheaders too
+    # short for a signature and its length field (5 bytes in a 32-bit file,
+    # 9 in a 64-bit one); pyreadstat reads both
+    def ds as Dataset init sas7Read(SAS7_FILE_SHORT32);
+    testing.assertEqual($ds.name, "SHORT");
+    testing.assertEqual($ds.encoding, "utf-8");
+    sas7ExpectVariables($ds, "names", ["s"]);
+    sas7ExpectVariables($ds, "widths", ["5"]);
+    testing.assertEqual(textColumn($ds, "s"), ["abcde", "", "x", "é", ""]);
+    $ds = sas7Read(SAS7_FILE_SHORT64);
+    sas7ExpectVariables($ds, "widths", ["9"]);
+    testing.assertEqual(textColumn($ds, "s"), ["abcdefghi", "", "xy", "Zürich", ""]);
+}
+
+func testSas7ShortColumns() {
+    # numbers of 3 to 7 bytes are read in bulk; every cell must equal the
+    # cell by cell conversion bit for bit (compared through %v, which tells
+    # -0.0 from 0.0), with the windows of the first column (little-endian)
+    # and of the last one (big-endian) running past the buffer
+    def offsets as list of int init [0, 3, 7, 9, 14, 20, 27, 35, 38];
+    def widths as list of int init [3, 4, 2, 5, 6, 7, 8, 3, 7];
+    def numeric as list of bool init [true, true, false, true, true, true, true, true, true];
+    for (def order in ["le", "be"]) {
+        sas7ExpectShort($order, $offsets, $widths, $numeric, 45, 300);
+        sas7ExpectShort($order, $offsets, $widths, $numeric, 45, 1);
+        # little-endian windows one byte apart: they must not share a mask
+        sas7ExpectShort(
+            $order,
+            [0, 8, 11, 13, 18],
+            [8, 3, 2, 5, 12],
+            [true, true, false, true, false],
+            30,
+            50);
+        # a row shorter than a double: one column at a time
+        sas7ExpectShort($order, [0], [5], [true], 5, 40);
+        sas7ExpectShort($order, [0, 3], [3, 3], [true, true], 6, 40);
+    }
+}
+
+/**
+ * Build rows of the given columns, decode them through sas7Decode and
+ * compare every numeric cell with sas7Numbers over sas7RawColumn.
+ *
+ * @param order {string} `le` or `be`
+ * @param offsets {list of int} the columns' offsets
+ * @param widths {list of int} their widths
+ * @param numeric {list of bool} which are numbers
+ * @param rl {int} the row length
+ * @param rows {int} the number of rows
+ */
+func sas7ExpectShort(
+    order as string,
+    offsets as list of int,
+    widths as list of int,
+    numeric as list of bool,
+    rl as int,
+    rows as int) {
+    # zeros, signs, extremes, subnormals, missing values ., .A, .Z, ._ (as
+    # index 0 and as code), a NaN SAS does not write, then pseudo-random
+    # patterns
+    def special as list of int init [
+        0,
+        sas7Pattern(0x80000000, 0),
+        sas7Pattern(0x40590000, 0),
+        sas7Pattern(0xC0FE2400, 0x12345678),
+        sas7Pattern(0xFFFFD100, 0),
+        sas7Pattern(0xFFFFBE00, 0),
+        sas7Pattern(0xFFFFA500, 0),
+        sas7Pattern(0xFFFFFF00, 0),
+        sas7Pattern(0xFFFFA000, 0),
+        sas7Pattern(0x7FEFFFFF, 0xFFFFFFFF),
+        sas7Pattern(0x00000123, 0),
+        sas7Pattern(0x800FFFFF, 0xFFFFFFFF),
+        sas7Pattern(0x7FF80000, 0)
+    ];
+    def flat as bytes init binary.make($rl * $rows, 0x20);
+    def seed as int init 12345;
+    for (def r in 0..$rows) {
+        for (def i in 0..len($offsets)) {
+            if (not $numeric[$i]) {
+                continue;
+            }
+            def raw as int;
+            if (($r == 0 or $r == $rows - 1) and $i % 2 == 0) {
+                # missing values in the rows read on their own
+                $raw = $special[4 + ($i // 2) % 5];
+            } elseif (($r + $i) % 3 == 0) {
+                $raw = $special[($r + 2 * $i) % len($special)];
+            } else {
+                $seed = ($seed * 1103515245 + 12345) % 2147483648;
+                def hi as int init $seed;
+                $seed = ($seed * 1103515245 + 12345) % 2147483648;
+                $raw = sas7Pattern($hi * 2 + $seed % 2, $seed * 2);
+                if ((($raw >> 52) & 0x7FF) == 0x7FF) {
+                    $raw = $raw ^ sas7Pattern(0x40000000, 0);
+                }
+            }
+            for (def k in 0..$widths[$i]) {
+                def at as int init $r * $rl + $offsets[$i] + $k;
+                if ($order == "le") {
+                    $at = $r * $rl + $offsets[$i] + $widths[$i] - 1 - $k;
+                }
+                $flat[$at] = ($raw >> (56 - 8 * $k)) & 0xFF;
+            }
+        }
+    }
+    def m as Sas7Meta init Sas7Meta{
+        texts: [],
+        rowSizeSeen: true,
+        rowLength: $rl,
+        totalRows: $rows,
+        deletedRows: 0,
+        mixRows: 0,
+        labelRef: [0, 0, 0],
+        compressionRef: [0, 0, 0],
+        columnCount: len($offsets),
+        nameRefs: [],
+        offsets: $offsets,
+        widths: $widths,
+        numeric: $numeric,
+        formatWidths: [],
+        formatDigits: [],
+        formatRefs: [],
+        labelRefs: []
+    };
+    def head as Sas7Head init Sas7Head{
+        u64: true,
+        order: $order,
+        align: 4,
+        headerSize: 8192,
+        pageSize: 65536,
+        pageCount: 1,
+        pageHead: 40,
+        pointerSize: 24,
+        word: 8,
+        release: "9.0401M5",
+        statTransfer: false,
+        name: binary.make(0),
+        charset: "utf-8"
+    };
+    def variables as list of Variable init [];
+    for (def i in 0..len($offsets)) {
+        $variables[] = Variable{
+            name: io.sprintf("v%d", $i),
+            label: "",
+            type: "numeric",
+            storage: "numeric",
+            width: $widths[$i],
+            format: "",
+            valueLabels: {},
+            missingValues: [],
+            missingRange: []
+        };
+    }
+    def ds as Dataset init sas7Decode($flat, $head, $m, $variables, $rows);
+    for (def i in 0..len($offsets)) {
+        if (not $numeric[$i]) {
+            continue;
+        }
+        def col as Sas7Column init sas7Numbers(
+            sas7RawColumn($flat, $offsets[$i], $rows, $widths[$i], $rl, $order),
+            "x");
+        testing.assertEqual($ds.missing[$i], $col.missing);
+        def got as list of string init [];
+        def want as list of string init [];
+        for (def r in 0..$rows) {
+            $got[] = io.sprintf("%v", $ds.numbers[$i][$r]);
+            $want[] = io.sprintf("%v", $col.numbers[$r]);
+        }
+        testing.assertEqual($got, $want);
+    }
+}
+
 /**
  * Bytes from a list of byte values.
  *

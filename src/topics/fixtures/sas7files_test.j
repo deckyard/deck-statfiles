@@ -868,3 +868,56 @@ def const SAS7_FILE_WIDTHS_LE as list of string init [
     "0SWSPllA7wV7h2/93jJT9TLz/UiJnMcInyi/8z+85Rf3gQ4eVcBfRB+1dz6D/fr/Jd8BpLpChgAw",
     "AAA="
 ];
+
+# derived from haven (MIT), tests/testthat/sas/formats.sas7bcat at 66a332ab by
+# a small script (kept outside the deck): $GENDER's "f" entry made the
+# character range 'a'-<'g', WORKSHOP's "1" entry the numeric range 1-<2 with
+# its label "R" in a type-9 record (32 bytes of text, the layout SAS 9.4
+# writes for range labels in the GSS 2021 catalog); 17408 bytes
+def const SAS7_CATALOG_RULES as list of string init [
+    "H4sIAAAAAAAC/+2bz28TRxTHZ+O1seOUtdsgoIcySiORC6kTIxQkkLr4RxLFG1u7AcKFZutsYpc4",
+    "Bjsg54h67aEgpKbqpT30L+ilF0RUVeolCCF6QaKqxAGhSEAkfkkcSGd2dr3rjb2Jwq4Q1ftEk9md",
+    "7LyZ7/xYad+bIGTxx/rV4m+98Ts3r4dR5K+h7w4cisX7+lAyyXUN882nAlxLeZL7PEmLYwHOfEIR",
+    "FZwdz2WyeVkSpxS8W1LilJjLj2Jq8+NvG78Or98X/81Ls0mS6w3duLvazGkHYwjxNj3HBxNHE0PS",
+    "0PSxo1+NFOQ82iW07fO396+ayfn3Fyu/NOx9RADwgfDSWLsUfQPHeBRAYwK9fC48FP4W/hRWBBgn",
+    "AAAAAAAAAAAAANgO5ZwiZxQZF0ZPjU9JYqHTc10kzQRiYXrNfGcpPJqZTGfkzrZpnREehaw6GJ/N",
+    "yxPKWN61nVgQ6e28Mr7/f/5pQnedTedSYzBjjJjtgrf5SOj4PQ5azzHH54Be3gXDBtiYzilywLaW",
+    "6qVl3Uf8xT853Y/da64fzkj6g1t94bTUbscNsw7XXJv+6OJt/bn2hOkxc1pGt8gaSY3mZsonEokh",
+    "Ix0jKaHrYnaYpYZRJ9gsbzaRfRddO405mLq+Nxo4s5fFG37/TGrR9cipy5SVSLboEjiBM3U9suki",
+    "pe9F117jBXXn9T3pRv998SA/N0lz1MPaXjGS2zq023HhxO51xdF4XsIptVjSsKLVrpSL2ja6PgqY",
+    "dUcm30WXZccPXQfQKbWuYXEQS4N4rlojEpfUher84XonXT28N/PVw/upaz9KLZQvfl1Va7NYLBa1",
+    "eh1L2lKpOttxvqJBb+YrGvRT1ycoVa1ULi+Wi+pSubqIC9XaUt11HXaHvJkv045f+8tYh8YyPC3n",
+    "ttlfkT3ezJdlxw9d+1B6eVGtlIs4TTYWzjSKJXVxXnPRFQ57o8uy44eug873Rrpcv4DnygtavYOu",
+    "PRFvdFl2/HlvpGvlKxqW1ItYZe+Nivt7I9TtjS7Ljh+6Pt0yX5crleV2E2bqCka90WXZ8UNXr1NX",
+    "RhLHc27vDb7HG12WHT90daPsVAEbulz5v32fvLbF/y1CHPvW2BC+MYYyjAAAAAAAAAAAAAAA+FDZ",
+    "ML7/Z9YmbBGCN0bsbZPEHJl7oJ8dRMCoJdoXJc6BAXL4IGREvrcGhSyjtOqXbXrAkZ8QdTK0cdnw",
+    "KEF+Rx3OB9Xhk5l33PN6W90t0XmEKo6ngoi6ymjfs1pFXdBIaC6iF/BIorfvkz6OxQjfcub4t57p",
+    "MKOSnD7+AT0ybB//+PqRqz/+cOmkffypg20GtTvlECP1ubZHF9j4c47xv7XB8lXz/tkm4cFdVh5f",
+    "MWo5xn/Vkd+ilTaflth9eC2I+kke2RxA8jaxTHZ0JUR6Tf7TDLYwAAAAAAAAAADAjvgPIS0AGgBE",
+    "AAA="
+];
+
+# written by a small hand-made writer (generator kept outside the deck): 32-bit
+# little-endian, RLE, one 5-byte string column whose rows that do not shrink
+# are stored uncompressed (as ReadStat's writer does), shorter than a
+# signature and its length field; 5120 bytes
+def const SAS7_FILE_SHORT32 as list of string init [
+    "H4sIAAAAAAAC/2NgQIBDrxoTNosInt87iYOB87hhj4S8gKCSEoOSMSOTISMDPiCCwgt2DFZw8/Rx",
+    "DfbwDwpRwA0YCAAXxxBHqLoDb/zvOCLRqIAFiAUYGJDdaKlnYGJg6GsaYWYSbx4Q5E+snaNgFIxs",
+    "wA2EDAwKfAwMD6AZSgDI5oHKPuBlYNCBsg8A2bAMNQPIVoGyE4BsEyg7AshmBTGAZgUA2Uyg7Apk",
+    "ewDZzFC2Ay8kC4PYFkhqRsEoGAWjYBSMglEwCkbBKBgFo2AwgEPQjk/j4ZUPQXRDxSMU8cSk5JRU",
+    "IP3v9///xJmoAOknQcGf////SyDxWcHDHEwYuoDK/iNGX2QY0LtNf4HyCgwoYzORUc5BPjB+MUgs",
+    "I7+oBMr/BgTIZnwHAnQ7WaEYBjC6agKj6YMcwMPAQXc7AQBsjiYAFAAA"
+];
+
+# written by a small hand-made writer (generator kept outside the deck): the
+# same in a 64-bit file, 9-byte rows; 12288 bytes
+def const SAS7_FILE_SHORT64 as list of string init [
+    "H4sIAAAAAAAC/+3avUsCYRwH8J+XgocOJzg4CB3R0BChnL1tHb1QYBjqUC692Ms5BdZQo3tD9K+0",
+    "FhwF1dbq0NASRTRX0Ivd6e/Me8o0iIL4fm54fL7P7/E5weEHd0Tvjm5LC/vh0Pnhnp/k0/hOpFMJ",
+    "aV2kaR4p7qGvhF2zjJ5RJ6aS45nJVDqrNkctjOlZvaHOvEtd6A2jm12lEIn3OdwXS8Ti0/2zA4n5",
+    "wZl0qt2zAQAAAAAAAAAAAAAAAAAA/peAdRGVg7VZT4d71eQ8Iuza5Twm5Abn3UI+xHmvkD8GauOI",
+    "kN9wLjsBP/i/5Fzi2Mt5mXOvkJ81+R4z4JrW6wEAAAAA/tI1j7njg2Ihb9RfbC1tbV/Z4wkHi0v5",
+    "5ZXVNaPA669PlarvnaaSjz8917ZXxL5frvbY0oedXF5R6kmUPmupX7guSq73iedyo+mkM9+wM2O9",
+    "uGmN95bGPt3xYGnnFzl9v6/Jesu2X8F/EH5GkPy/fuYbd6Dp7wAwAAA="
+];

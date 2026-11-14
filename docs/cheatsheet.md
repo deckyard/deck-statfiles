@@ -13,8 +13,8 @@ import "@deckyard/statfiles/" as statfiles;
 A reader takes the file as `bytes` (`fs.readBytes`) and returns a
 `Dataset`. A malformed file or a bad argument throws
 `Error{kind: "statfiles"}`; a file over a cap (`Options.maxCells`, the
-unpacked size of compressed SPSS cases or of a compressed `.sas7bdat`) is kind
-`"limit"`. A `name` is a variable's
+unpacked size of compressed SPSS cases or of a compressed `.sas7bdat`, a
+`.sas7bcat`'s size or label count) is kind `"limit"`. A `name` is a variable's
 name exactly as stored; a `row` counts from 0.
 
 ## Constants
@@ -49,7 +49,7 @@ name exactly as stored; a `row` counts from 0.
 
 | Function | Returns | Does |
 |---|---|---|
-| `readSas7bcat(data, opts)` | `map of string to map of string to string` | the value labels of a SAS format catalog (`.sas7bcat`): format name (`GENDER`, `$GENDER`) to value to label |
+| `readSas7bcat(data, opts)` | `map of string to map of string to string` | the value labels of a SAS format catalog (`.sas7bcat`): format name (`GENDER`, `$GENDER`) to value to label; a format with no single-value label is left out |
 | `withSasLabels(ds, catalog)` | `Dataset` | `ds` with each variable's `valueLabels` from the catalog format its `format` names |
 | `sasFormatName(format)` | `string` | a display format's catalog name: `$GENDER6.` is `$GENDER`, `8.2` is `""` |
 
@@ -85,7 +85,7 @@ name exactly as stored; a `row` counts from 0.
 | `rowCount as int` | the number of rows |
 | `variables as list of Variable` | the variables, in file order |
 | `numbers as list of list of float` | a numeric variable's values by row (0.0 where missing); `[]` for a string variable |
-| `texts as list of list of string` | a string variable's values by row; `[]` for a numeric variable |
+| `texts as list of list of string` | a string variable's values by row (Stata's with their trailing blanks, SPSS's and SAS's without); `[]` for a numeric variable |
 | `missing as list of list of string` | each cell's missing code, `""` when present |
 
 ### `Variable`
@@ -96,7 +96,7 @@ name exactly as stored; a `row` counts from 0.
 | `label as string` | its label, `""` if none |
 | `type as string` | `numeric` or `string` |
 | `storage as string` | the file's type: Stata `byte` ... `double`, `str<n>`, `strL`; SPSS and SAS `numeric` / `string` |
-| `width as int` | a string variable's width in bytes; 0 for a number |
+| `width as int` | the bytes a value takes: a string variable's width (0 for a Stata `strL`); a number's stored size (Stata 1 to 8, `.sav` / `.zsav` 8, SAS 3 to 8, XPORT 2 to 8, `.por` 0) |
 | `format as string` | the display format: `%9.0g`, `F8.2`, `DATE9.` |
 | `valueLabels as map of string to string` | value labels, keyed by `valueKey` (Stata `.a` keyed `".a"`) |
 | `missingValues as list of string` | values SPSS declares missing, as `valueKey` writes them |
@@ -107,5 +107,5 @@ name exactly as stored; a `row` counts from 0.
 | Field | Meaning |
 |---|---|
 | `encoding as string` | the text's character set, overriding the file's; `""` for the file's own |
-| `maxCells as int` | the most cells read; kind `"limit"` beyond |
-| `maxBytes as int` | the most bytes compressed SPSS cases (`.zsav` zlib blocks, and bytecode in the uncompressed layout) or the rows of a compressed `.sas7bdat` unpack to; kind `"limit"` beyond |
+| `maxCells as int` | the most cells read, or value labels read from a `.sas7bcat`; kind `"limit"` beyond |
+| `maxBytes as int` | the most bytes compressed SPSS cases (`.zsav` zlib blocks, and bytecode in the uncompressed layout) or the rows of a compressed `.sas7bdat` unpack to, and the largest `.sas7bcat`; kind `"limit"` beyond |

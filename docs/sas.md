@@ -47,7 +47,7 @@ end the member early; no writer is known to produce one.
 |---|---|
 | member name (8 characters, 32 in version 8) | `Dataset.name` |
 | member label (the first 40 characters) | `Dataset.label` |
-| NAMESTR type 1, any length from 2 to 8 bytes | `type` and `storage` `numeric`, `width` 0 |
+| NAMESTR type 1, any length from 2 to 8 bytes | `type` and `storage` `numeric`, `width` the stored length (2 to 8) |
 | NAMESTR type 2 | `type` and `storage` `string`, `width` the stored length |
 | `nname`, or the version 8 long name | `Variable.name` |
 | `nlabel` | `Variable.label` |
