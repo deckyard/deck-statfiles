@@ -223,6 +223,9 @@ func testCheckSize() {
         missed();
     } catch (e) {
         testing.assertEqual($e.kind, "limit");
+        # no "statfiles: " in front: kind and message printed together
+        # doubled it
+        testing.assertEqual($e.message, "6 rows of 2 variables is over 10 cells");
     }
     checkSize($small, 5, 2);
     checkSize($small, 100, 0);
@@ -232,5 +235,6 @@ func testCheckSize() {
         missed();
     } catch (e) {
         testing.assertEqual($e.kind, ERROR_KIND);
+        testing.assertEqual($e.message, "maxCells and maxBytes are at least 1");
     }
 }

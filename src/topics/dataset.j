@@ -132,19 +132,22 @@ export func options() {
 /**
  * Throw a statfiles error.
  *
- * @param message {string} what is wrong, without the `statfiles: ` prefix
+ * The message carries no `statfiles: ` prefix: the kind already says where
+ * the error comes from.
+ *
+ * @param message {string} what is wrong
  */
 func fail(message as string) {
-    throw Error{kind: ERROR_KIND, message: "statfiles: " + $message};
+    throw Error{kind: ERROR_KIND, message: $message};
 }
 
 /**
  * Throw a `"limit"` error.
  *
- * @param message {string} which cap was reached, without the prefix
+ * @param message {string} which cap was reached
  */
 func failLimit(message as string) {
-    throw Error{kind: "limit", message: "statfiles: " + $message};
+    throw Error{kind: "limit", message: $message};
 }
 
 /**
