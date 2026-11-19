@@ -21,7 +21,6 @@ name exactly as stored; a `row` counts from 0.
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `VERSION` | `"0.1.0"` | this deck's version |
 | `ERROR_KIND` | `"statfiles"` | the kind of a malformed file or a bad argument |
 | `DEFAULT_MAX_CELLS` | `20000000` | the most cells (rows times variables) read |
 | `DEFAULT_MAX_BYTES` | `268435456` | the most bytes compressed SPSS cases or the rows of a compressed `.sas7bdat` unpack to |

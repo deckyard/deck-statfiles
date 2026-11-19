@@ -136,7 +136,6 @@ time.
 - PSPP's `.por` writer keeps fewer digits than a double needs, so its
   `.por` and `.sav` values differ in the last digits; the deck reads what
   is written.
-- The committed `VERSION` lags the manifest; CI stamps it at release.
 
 ## Dependencies on the interpreter
 

@@ -52,7 +52,6 @@ use strings;
 
 import "csv.j" as csv;
 
-include "topics/version.j";
 include "topics/dataset.j";
 include "topics/dta.j";
 include "topics/sav.j";
