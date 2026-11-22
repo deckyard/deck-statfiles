@@ -139,9 +139,11 @@ time.
 
 ## Dependencies on the interpreter
 
+- Floor `>=0.27.0`, the default binary only: the UTF-8 codecs of
+  `encoding.encode` / `decode`, `strings.replicate` and
+  `testing.assertThrowsArgs` arrived in 0.27.0.
 - The `binary` number readers, bulk reads (`binary.readFloats`, `binary.readInts`) and
-  the byte operations the `.sas7bdat` bulk decoder uses (0.26.0, the
-  floor). The default binary only.
+  the byte operations the `.sas7bdat` bulk decoder uses (0.26.0).
 - `compress` (zlib), `encoding`, `decimal` and the bundled `csv` module.
 - Caps as kind `"limit"` (`jennifer`'s M28.54, a reached cap is kind
   "limit").

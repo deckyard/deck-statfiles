@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - white-box tests for the xpt topic. Spliced into
 # statfiles_test.j via include. Every expected value was cross-checked
@@ -214,7 +214,7 @@ func testXptV8LabelSection() {
     testing.assertEqual($ds.label, "Grüße");
     testing.assertEqual($ds.rowCount, 3);
     testing.assertEqual(names($ds), ["measurementValue", "code"]);
-    testing.assertEqual(variable($ds, "measurementValue").label, strings.repeat("M", 50));
+    testing.assertEqual(variable($ds, "measurementValue").label, strings.replicate("M", 50));
     testing.assertEqual(variable($ds, "measurementValue").format, "COMMA10.2");
     testing.assertEqual($ds.numbers[0], [1234.5, 0.0, -0.0001]);
     testing.assertEqual($ds.missing[0], ["", ".m", ""]);
@@ -302,7 +302,7 @@ func testXptMembers() {
         testing.assertEqual(textColumn($all[1], "y"), ["one", "two"]);
         testing.assertEqual($all[1].numbers[1], [10.5, 0.0]);
         testing.assertEqual($all[1].missing[1], ["", "."]);
-        testing.assertThrowsWith("xptRead", [xptFixture($lines)], ERROR_KIND);
+        testing.assertThrowsArgs("xptRead", [xptFixture($lines)], ERROR_KIND);
     }
     def one as list of Dataset init readXptMembers(xptFixture(XPT_V5_BASIC), options());
     testing.assertEqual(len($one), 1);
@@ -311,9 +311,9 @@ func testXptMembers() {
 
 func testXptNoMember() {
     # the three library header records alone: a library of no members
-    def data as bytes init binary.slice(xptFixture(XPT_V5_BASIC), 0, 240);
+    def data as bytes init xptFixture(XPT_V5_BASIC)[..240];
     testing.assertEqual(readXptMembers($data, options()), []);
-    testing.assertThrowsWith("xptRead", [$data], ERROR_KIND);
+    testing.assertThrowsArgs("xptRead", [$data], ERROR_KIND);
 }
 
 func testXptMaxCells() {
@@ -357,7 +357,7 @@ func testXptTruncated() {
     def dataStart as int init xptFind($data, "HEADER RECORD*******OBS ") + 80;
     def shorter as int init 0;
     for (def cut in 0..len($data)) {
-        def kind as string init xptKind(binary.slice($data, 0, $cut));
+        def kind as string init xptKind($data[..$cut]);
         if ($cut == 240) {
             testing.assertEqual($kind, "");
         } elseif ($cut % 80 == 0 and $cut >= $dataStart) {
@@ -375,7 +375,7 @@ func testXptTruncated() {
     $data = xptFixture(XPT_V8_MULTI);
     def second as int init binary.indexOf($data, encoding.encode("ascii", "MEMBV8"), 300) - 20;
     for (def cut in 0..len($data)) {
-        def kind as string init xptKind(binary.slice($data, 0, $cut));
+        def kind as string init xptKind($data[..$cut]);
         if ($cut == 240 or $cut == $second) {
             testing.assertEqual($kind, "");
         } else {
@@ -410,7 +410,7 @@ func testXptCorrupt() {
 func testXptCorruptV8() {
     def data as bytes init xptFixture(XPT_V8_BLANK);
     def obs as int init xptFind($data, "OBSV8");
-    def blanks as string init strings.repeat(" ", 31);
+    def blanks as string init strings.replicate(" ", 31);
     testing.assertEqual(xptKind(xptPatch($data, $obs - 20 + 48, "4" + $blanks)), "");
     testing.assertEqual(xptKind(xptPatch($data, $obs - 20 + 48, "81" + $blanks)), ERROR_KIND);
     testing.assertEqual(xptKind(xptPatch($data, $obs - 20 + 48, "1" + $blanks)), ERROR_KIND);

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - white-box tests for the dta topic. Spliced into
 # statfiles_test.j via include. The sample files are in fixtures/dtafiles_test.j.
@@ -78,7 +78,7 @@ func dtaPatch(b as bytes, at as int, values as list of int) {
  * @return {int} its first offset, -1 if absent
  */
 func dtaFind(b as bytes, text as string) {
-    return binary.indexOf($b, convert.bytesFromString("utf-8", $text));
+    return binary.indexOf($b, encoding.encode("utf-8", $text));
 }
 
 /**
@@ -136,7 +136,7 @@ func testDtaDetect() {
         testing.assertEqual(detect(dtaSample($lines)), "dta");
     }
     testing.assertFalse(looksLikeDta(binary.make(0)));
-    testing.assertFalse(looksLikeDta(convert.bytesFromString("utf-8", "<stata_dta><header>")));
+    testing.assertFalse(looksLikeDta(encoding.encode("utf-8", "<stata_dta><header>")));
     # 116 was never released; 115 with byte order 3 is no dta either
     testing.assertFalse(looksLikeDta(dtaPatch(binary.make(8), 0, [116, 2, 1, 0])));
     testing.assertFalse(looksLikeDta(dtaPatch(binary.make(8), 0, [115, 3, 1, 0])));
@@ -368,7 +368,7 @@ func testDtaTruncated() {
     def tagged as bytes init dtaSample(DTA_PD119BE_BASE64);
     def cut as int init 0;
     while ($cut < len($tagged)) {
-        testing.assertThrowsWith("dtaReadBytes", [binary.slice($tagged, 0, $cut)], ERROR_KIND);
+        testing.assertThrowsArgs("dtaReadBytes", [$tagged[..$cut]], ERROR_KIND);
         $cut = $cut + 3;
     }
     # an old file may end after its data or after any value label table
@@ -376,7 +376,7 @@ func testDtaTruncated() {
     def whole as int init 0;
     for (def n in 0..len($b)) {
         try {
-            def ds as Dataset init dtaReadBytes(binary.slice($b, 0, $n));
+            def ds as Dataset init dtaReadBytes($b[..$n]);
             testing.assertEqual(variable($ds, "a").valueLabels, {});
             $whole = $whole + 1;
         } catch (e) {
@@ -403,52 +403,52 @@ func testDtaCorruptBytes() {
 func testDtaMalformed() {
     def old as bytes init dtaSample(DTA_H115_BASE64);
     # byte order 3, file type 2, an unknown type code, a never-released format
-    testing.assertThrowsWith("dtaReadBytes", [dtaPatch($old, 1, [3])], ERROR_KIND);
-    testing.assertThrowsWith("dtaReadBytes", [dtaPatch($old, 2, [2])], ERROR_KIND);
-    testing.assertThrowsWith("dtaReadBytes", [dtaPatch($old, 109, [250])], ERROR_KIND);
-    testing.assertThrowsWith("dtaReadBytes", [dtaPatch($old, 0, [116])], ERROR_KIND);
+    testing.assertThrowsArgs("dtaReadBytes", [dtaPatch($old, 1, [3])], ERROR_KIND);
+    testing.assertThrowsArgs("dtaReadBytes", [dtaPatch($old, 2, [2])], ERROR_KIND);
+    testing.assertThrowsArgs("dtaReadBytes", [dtaPatch($old, 109, [250])], ERROR_KIND);
+    testing.assertThrowsArgs("dtaReadBytes", [dtaPatch($old, 0, [116])], ERROR_KIND);
     # data at 1310, 24-byte records: a NaN float, a double above .z
-    testing.assertThrowsWith(
+    testing.assertThrowsArgs(
         "dtaReadBytes",
         [dtaPatch($old, 1317, [255, 255, 255, 127])],
         ERROR_KIND);
-    testing.assertThrowsWith(
+    testing.assertThrowsArgs(
         "dtaReadBytes",
         [dtaPatch($old, 1321, [0, 0, 0, 0, 0, 27, 224, 127])],
         ERROR_KIND);
     # the label table at 1430: n no longer matches its length; a text offset outside it
-    testing.assertThrowsWith("dtaReadBytes", [dtaPatch($old, 1470, [5])], ERROR_KIND);
-    testing.assertThrowsWith("dtaReadBytes", [dtaPatch($old, 1478, [200])], ERROR_KIND);
+    testing.assertThrowsArgs("dtaReadBytes", [dtaPatch($old, 1470, [5])], ERROR_KIND);
+    testing.assertThrowsArgs("dtaReadBytes", [dtaPatch($old, 1478, [200])], ERROR_KIND);
 
     def tagged as bytes init dtaSample(DTA_PD118BE_BASE64);
-    testing.assertThrowsWith(
+    testing.assertThrowsArgs(
         "dtaReadBytes",
         [dtaPatch($tagged, dtaFind($tagged, "<release>") + 9, [49, 49, 54])],
         ERROR_KIND);
-    testing.assertThrowsWith(
+    testing.assertThrowsArgs(
         "dtaReadBytes",
         [dtaPatch($tagged, dtaFind($tagged, "<byteorder>") + 11, [88])],
         ERROR_KIND);
     # a GSO of type 131; a strL reference to (2,9), which no GSO defines
     def gso as int init dtaFind($tagged, "GSO");
-    testing.assertThrowsWith("dtaReadBytes", [dtaPatch($tagged, $gso + 15, [131])], ERROR_KIND);
-    testing.assertThrowsWith(
+    testing.assertThrowsArgs("dtaReadBytes", [dtaPatch($tagged, $gso + 15, [131])], ERROR_KIND);
+    testing.assertThrowsArgs(
         "dtaReadBytes",
         [dtaPatch($tagged, dtaFind($tagged, "<data>") + 6 + 15, [9])],
         ERROR_KIND);
     # a map entry that disagrees, a missing closing tag, a byte after the end
     def mapAt as int init dtaFind($tagged, "<map>") + 5;
-    testing.assertThrowsWith(
+    testing.assertThrowsArgs(
         "dtaReadBytes",
         [dtaPatch($tagged, $mapAt + 9 * 8 + 7, [1])],
         ERROR_KIND);
-    testing.assertThrowsWith(
+    testing.assertThrowsArgs(
         "dtaReadBytes",
         [dtaPatch($tagged, dtaFind($tagged, "</data>") + 2, [120])],
         ERROR_KIND);
-    testing.assertThrowsWith("dtaReadBytes", [binary.join([$tagged, binary.make(1)])], ERROR_KIND);
+    testing.assertThrowsArgs("dtaReadBytes", [binary.join([$tagged, binary.make(1)])], ERROR_KIND);
     # a map entry above the int range
-    testing.assertThrowsWith("dtaReadBytes", [dtaPatch($tagged, $mapAt, [255])], ERROR_KIND);
+    testing.assertThrowsArgs("dtaReadBytes", [dtaPatch($tagged, $mapAt, [255])], ERROR_KIND);
 }
 
 func testDtaThroughReadAndCsv() {

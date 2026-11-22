@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - the dta topic: Stata .dta, the released formats 104 to 119.
 # Spliced into statfiles.j via include. Formats 104 to 115 have a fixed
@@ -104,7 +104,7 @@ def struct DtaColumn {
  * @return {bool} true when it is
  */
 func looksLikeDta(data as bytes) {
-    if (binary.startsWith($data, convert.bytesFromString("utf-8", DTA_TAGGED))) {
+    if (binary.startsWith($data, encoding.encode("utf-8", DTA_TAGGED))) {
         return true;
     }
     if (len($data) < 4) {
@@ -135,7 +135,7 @@ func dtaOldRelease(r as int) {
  *   def ds as statfiles.Dataset init statfiles.readDta(fs.readBytes("auto.dta"), statfiles.options());
  */
 export func readDta(data as bytes, opts as Options) {
-    if (binary.startsWith($data, convert.bytesFromString("utf-8", DTA_TAGGED))) {
+    if (binary.startsWith($data, encoding.encode("utf-8", DTA_TAGGED))) {
         def head as DtaHead init dtaTaggedHead($data, $opts);
         def tail as DtaTail init dtaTaggedTail($data, $head);
         return dtaBuild($data, $head, $tail);
@@ -219,7 +219,7 @@ func dtaField(data as bytes, at as int, width as int, charset as string) {
     if ($end < 0) {
         $end = $at + $width;
     }
-    return dtaText(binary.slice($data, $at, $end), $charset);
+    return dtaText($data[$at..$end], $charset);
 }
 
 /**
@@ -290,7 +290,7 @@ func dtaUint(order as string, data as bytes, at as int, size as int, what as str
  * @return {int} the offset after it
  */
 func dtaTag(data as bytes, at as int, tag as string) {
-    def t as bytes init convert.bytesFromString("utf-8", $tag);
+    def t as bytes init encoding.encode("utf-8", $tag);
     need($data, $at, len($t), $tag);
     if (binary.indexOf($data, $t, $at, $at + len($t)) != $at) {
         fail(io.sprintf("no %s at offset %d", $tag, $at));
@@ -307,7 +307,7 @@ func dtaTag(data as bytes, at as int, tag as string) {
  * @return {bool} true when it does
  */
 func dtaIsTag(data as bytes, at as int, tag as string) {
-    def t as bytes init convert.bytesFromString("utf-8", $tag);
+    def t as bytes init encoding.encode("utf-8", $tag);
     return $at + len($t) <= len($data) and binary.indexOf($data, $t, $at, $at + len($t)) == $at;
 }
 
@@ -863,12 +863,12 @@ func dtaTaggedTail(data as bytes, head as DtaHead) {
         def size as int init binary.readUint($order, $data, $at + 1, 4);
         $at = $at + 5;
         need($data, $at, $size, "a strL");
-        def body as bytes init binary.slice($data, $at, $at + $size);
+        def body as bytes init $data[$at..$at + $size];
         if ($kind == 130) {
             if ($size == 0 or $body[$size - 1] != 0) {
                 fail(io.sprintf("a text strL at offset %d without its closing NUL", $at));
             }
-            $body = binary.slice($body, 0, $size - 1);
+            $body = $body[..$size - 1];
         } elseif ($kind != 129) {
             fail(io.sprintf("a strL of unknown type %d", $kind));
         }
@@ -915,7 +915,7 @@ func dtaBlank(n as int) {
     if ($n == 0) {
         return [];
     }
-    return strings.split(strings.repeat(",", $n - 1), ",");
+    return strings.split(strings.replicate(",", $n - 1), ",");
 }
 
 /**
@@ -1137,9 +1137,9 @@ func dtaStrings(data as bytes, head as DtaHead, at as int, record as int, width 
             }
             # trailing blanks are data in Stata: only the NUL padding goes
             if ($utf8) {
-                $out[] = convert.stringFromBytes("utf-8", binary.slice($data, $o, $end));
+                $out[] = encoding.decode("utf-8", $data[$o..$end]);
             } else {
-                $out[] = encoding.decode($cs, binary.slice($data, $o, $end));
+                $out[] = encoding.decode($cs, $data[$o..$end]);
             }
             $o = $o + $record;
         }

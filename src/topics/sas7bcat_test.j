@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - white-box tests for the sas7bcat topic. Spliced into
 # statfiles_test.j via include, after the sas7bdat overlay (its fixtures and
@@ -188,11 +188,9 @@ func testSas7CatalogErrors() {
     def data as bytes init sas7Fixture(SAS7_CATALOG_HADLEY);
     testing.assertEqual(sas7cErrorKind(sas7Fixture(SAS7_FILE_HADLEY), options()), ERROR_KIND);
     testing.assertEqual(sas7cErrorKind(binary.make(4096), options()), ERROR_KIND);
-    testing.assertEqual(
-        sas7cErrorKind(binary.slice($data, 0, len($data) - 1), options()),
-        ERROR_KIND);
+    testing.assertEqual(sas7cErrorKind($data[..len($data) - 1], options()), ERROR_KIND);
     # a catalog of one page has no index
-    def one as bytes init sas7Patch(binary.slice($data, 0, 1024 + 4096), 208, [1, 0, 0, 0]);
+    def one as bytes init sas7Patch($data[..1024 + 4096], 208, [1, 0, 0, 0]);
     testing.assertEqual(sas7cErrorKind($one, options()), ERROR_KIND);
     # every byte of the pages holding the blocks, inverted: an error of
     # kind statfiles, or a catalog that still reads

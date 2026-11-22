@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - the por topic: SPSS portable .por. Spliced into statfiles.j via include.
 #
@@ -619,7 +619,7 @@ func porStream(data as bytes) {
         if ($size > 80) {
             fail(io.sprintf("line %d is longer than 80 columns", $k + 1));
         }
-        $parts[] = binary.slice($lines[$k], 0, $size);
+        $parts[] = $lines[$k][..$size];
         if ($size < 80) {
             $parts[] = binary.make(80 - $size, 32);
         }
@@ -661,7 +661,7 @@ func porTranslation(s as bytes) {
  * @return {bool} true when it is
  */
 func looksLikePor(data as bytes) {
-    def head as bytes init binary.slice($data, 0, math.min(len($data), 600));
+    def head as bytes init $data[..math.min(len($data), 600)];
     def s as bytes;
     try {
         $s = porStream($head);
@@ -676,7 +676,7 @@ func looksLikePor(data as bytes) {
     for (def k in 0..8) {
         $sig[$k] = $tr[$s[456 + $k]];
     }
-    return $sig == convert.bytesFromString("utf-8", "SPSSPORT");
+    return $sig == encoding.encode("utf-8", "SPSSPORT");
 }
 
 /**
@@ -933,7 +933,7 @@ func porString(s as bytes, c as PorCursor) {
  * @return {bytes} the string
  */
 func porLast(s as bytes, c as PorCursor) {
-    return binary.slice($s, $c.pos - math.floor($c.num), $c.pos);
+    return $s[$c.pos - math.floor($c.num)..$c.pos];
 }
 
 /**
@@ -957,13 +957,13 @@ export func readPor(data as bytes, opts as Options) {
         }
     }
     if (not $same) {
-        def out as bytes init binary.slice($s, 0, POR_TABLE_AT + 256);
+        def out as bytes init $s[..POR_TABLE_AT + 256];
         for (def k in POR_TABLE_AT + 256..len($s)) {
             $out[] = $tr[$s[$k]];
         }
         $s = $out;
     }
-    if (binary.slice($s, 456, POR_RECORDS_AT) != convert.bytesFromString("utf-8", "SPSSPORT")) {
+    if ($s[456..POR_RECORDS_AT] != encoding.encode("utf-8", "SPSSPORT")) {
         fail("not an SPSS portable file");
     }
     def cs as string init "utf-8";
@@ -971,14 +971,14 @@ export func readPor(data as bytes, opts as Options) {
         $cs = charsetName($opts.encoding);
     } else {
         try {
-            convert.stringFromBytes("utf-8", binary.slice($s, POR_RECORDS_AT, len($s)));
+            encoding.decode("utf-8", $s[POR_RECORDS_AT..len($s)]);
         } catch (e) {
             $cs = "windows-1252";
         }
     }
     def label as string init "";
-    if (binary.slice($s, 40, 60) == convert.bytesFromString("utf-8", "ASCII SPSS PORT FILE")) {
-        $label = decodeText(binary.slice($s, 60, 80), $cs);
+    if ($s[40..60] == encoding.encode("utf-8", "ASCII SPSS PORT FILE")) {
+        $label = decodeText($s[60..80], $cs);
     }
     def c as PorCursor init PorCursor{pos: POR_RECORDS_AT, num: 0.0, sysmis: false};
     need($s, $c.pos, 1, "the version");

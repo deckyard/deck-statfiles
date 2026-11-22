@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - the xpt topic: SAS XPORT .xpt, versions 5 and 8 (SAS TS-140
 # and the "Record Layout for a SAS Version 8 or 9 Data Set in SAS Transport
@@ -224,7 +224,7 @@ func xptVersion(data as bytes) {
  * @return {string} the text
  */
 func xptAscii(data as bytes, pos as int, start as int, end as int) {
-    return encoding.decode("iso-8859-1", binary.slice($data, $pos + $start, $pos + $end));
+    return encoding.decode("iso-8859-1", $data[$pos + $start..$pos + $end]);
 }
 
 /**
@@ -390,11 +390,9 @@ func xptMember(data as bytes, pos as int, v8 as bool, charset as string) {
     xptExpectHeader($data, $pos + XPT_RECORD, $kinds[1]);
     $pos = $pos + 2 * XPT_RECORD;
     need($data, $pos, 3 * XPT_RECORD, "the member header");
-    def name as string init decodeText(
-        binary.slice($data, $pos + 8, $pos + 8 + $nameWidth),
-        $charset);
+    def name as string init decodeText($data[$pos + 8..$pos + 8 + $nameWidth], $charset);
     def label as string init decodeText(
-        binary.slice($data, $pos + XPT_RECORD + 32, $pos + XPT_RECORD + 72),
+        $data[$pos + XPT_RECORD + 32..$pos + XPT_RECORD + 72],
         $charset);
     $pos = $pos + 2 * XPT_RECORD;
     xptExpectHeader($data, $pos, $kinds[2]);
@@ -469,9 +467,9 @@ func xptMember(data as bytes, pos as int, v8 as bool, charset as string) {
 func xptNamestr(data as bytes, at as int, v8 as bool, charset as string) {
     def ntype as int init binary.readUint("be", $data, $at, 2);
     def width as int init binary.readUint("be", $data, $at + 4, 2);
-    def name as string init decodeText(binary.slice($data, $at + 8, $at + 16), $charset);
+    def name as string init decodeText($data[$at + 8..$at + 16], $charset);
     if ($v8) {
-        def long as string init decodeText(binary.slice($data, $at + 88, $at + 120), $charset);
+        def long as string init decodeText($data[$at + 88..$at + 120], $charset);
         if ($long != "") {
             $name = $long;
         }
@@ -492,12 +490,12 @@ func xptNamestr(data as bytes, at as int, v8 as bool, charset as string) {
     }
     def v as Variable init Variable{
         name: $name,
-        label: decodeText(binary.slice($data, $at + 16, $at + 56), $charset),
+        label: decodeText($data[$at + 16..$at + 56], $charset),
         type: "string",
         storage: "string",
         width: $width,
         format: xptFormat(
-            decodeText(binary.slice($data, $at + 56, $at + 64), $charset),
+            decodeText($data[$at + 56..$at + 64], $charset),
             binary.readUint("be", $data, $at + 64, 2),
             binary.readUint("be", $data, $at + 66, 2)),
         valueLabels: {},
@@ -553,7 +551,7 @@ func xptLabels(data as bytes, pos as int, v9 as bool, count as int, charset as s
         need($data, $at, $lengths[0] + $lengths[1] + $lengths[2] + $lengths[3], $what);
         def texts as list of string init [];
         for (def n in $lengths) {
-            $texts[] = decodeText(binary.slice($data, $at, $at + $n), $charset);
+            $texts[] = decodeText($data[$at..$at + $n], $charset);
             $at = $at + $n;
         }
         $entries[] = XptLabel{
@@ -771,7 +769,7 @@ func xptTexts(
     def out as list of string init [];
     def at as int init $start;
     for (def r in 0..$rows) {
-        $out[] = decodeText(binary.slice($data, $at, $at + $width), $charset);
+        $out[] = decodeText($data[$at..$at + $width], $charset);
         $at = $at + $stride;
     }
     return $out;

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - SAS XPORT sample files as base64, for the xpt overlay. Written
 # by pyreadstat 1.3.8 and by a small hand-made writer (the generator scripts

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - the sas7bcat topic: the value labels of SAS format catalogs
 # (.sas7bcat), as ReadStat reads them, and attaching them to a data set.
@@ -119,7 +119,7 @@ export func readSas7bcat(data as bytes, opts as Options) {
     }
     for (def i in SAS7C_FIRST_SCAN_PAGE..$head.pageCount) {
         $page = $head.headerSize + $i * $head.pageSize;
-        if (binary.slice($data, $page + $at, $page + $at + 4) == $magic) {
+        if ($data[$page + $at..$page + $at + 4] == $magic) {
             $found = sas7cIndex($data, $head, $page + $at, $page + $head.pageSize, $size, $flag);
             for (def p in $found) {
                 $pointers[] = $p;
@@ -170,10 +170,10 @@ func sas7cIndex(
     def out as list of int init [];
     def x as int init $from;
     while ($x + $size <= $end) {
-        if (binary.slice($data, $x, $x + 4) != $magic) {
+        if ($data[$x..$x + 4] != $magic) {
             # some records are preceded by 8 bytes of padding
             $x = $x + 8;
-            if ($x + $size > $end or binary.slice($data, $x, $x + 4) != $magic) {
+            if ($x + $size > $end or $data[$x..$x + 4] != $magic) {
                 break;
             }
         }
@@ -248,7 +248,7 @@ func sas7cBlock(data as bytes, head as Sas7Head, page as int, pos as int, budget
         if ($used > $budget) {
             fail("the catalog's blocks are longer than the file (a link chain loops)");
         }
-        $parts[] = binary.slice($data, $at + $hl, $at + $hl + $n);
+        $parts[] = $data[$at + $hl..$at + $hl + $n];
     }
     return $parts;
 }
@@ -306,7 +306,7 @@ func sas7cFormat(b as bytes, head as Sas7Head, seen as int, max as int) {
             $other,
             $shift));
     }
-    def name as string init decodeText(binary.slice($b, 8, 16), $head.charset);
+    def name as string init decodeText($b[8..16], $head.charset);
     if ($pad > 0) {
         $pad = $pad + 16;
     }
@@ -314,7 +314,7 @@ func sas7cFormat(b as bytes, head as Sas7Head, seen as int, max as int) {
         if (len($b) < $payload + $pad + 32) {
             return $none;
         }
-        $name = decodeText(binary.slice($b, $payload + $pad, $payload + $pad + 32), $head.charset);
+        $name = decodeText($b[$payload + $pad..$payload + $pad + 32], $head.charset);
         $pad = $pad + 32;
     }
     if (len($b) < $payload + $pad or $used == 0 or strings.startsWith($name, "@")) {
@@ -330,7 +330,7 @@ func sas7cFormat(b as bytes, head as Sas7Head, seen as int, max as int) {
     return Sas7cFormat{
         name: strings.upper($name),
         labels: sas7cLabels(
-            binary.slice($b, $payload + $pad, len($b)),
+            $b[$payload + $pad..len($b)],
             $head,
             $capacity,
             $used,
@@ -409,9 +409,7 @@ func sas7cLabels(
         if ($n < 0 or $at + 10 + $n > $size) {
             fail("a format block ends inside a label");
         }
-        def label as string init decodeText(
-            binary.slice($b, $at + 10, $at + 10 + $n),
-            $head.charset);
+        def label as string init decodeText($b[$at + 10..$at + 10 + $n], $head.charset);
         $at = $next;
         if ($other > 0 and $i == $other - 1) {
             continue;
@@ -432,7 +430,7 @@ func sas7cLabels(
                 # a range of strings: no single key
                 continue;
             }
-            $out[decodeText(binary.slice($b, $e + 22 + $shift, $entryEnd), $head.charset)] = $label;
+            $out[decodeText($b[$e + 22 + $shift..$entryEnd], $head.charset)] = $label;
             continue;
         }
         def start as int init binary.readInt("be", $b, $e + 22, 8);

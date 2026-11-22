@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - the dataset topic: the result types, options, format detection
 # and dispatch, the cell and column accessors, CSV output, and the helpers
@@ -198,7 +198,7 @@ func untilNul(b as bytes) {
     if ($at < 0) {
         return $b;
     }
-    return binary.slice($b, 0, $at);
+    return $b[..$at];
 }
 
 /**
@@ -214,7 +214,7 @@ func decodeText(b as bytes, charset as string) {
         $end = $end - 1;
     }
     if ($end < len($b)) {
-        $b = binary.slice($b, 0, $end);
+        $b = $b[..$end];
     }
     return decodeBytes($b, $charset);
 }
@@ -230,7 +230,7 @@ func decodeBytes(b as bytes, charset as string) {
     def s as string;
     if ($charset == "utf-8") {
         try {
-            $s = convert.stringFromBytes("utf-8", $b);
+            $s = encoding.decode("utf-8", $b);
         } catch (e) {
             fail("text that is not valid UTF-8 (set Options.encoding if the file is in another character set)");
         }
@@ -308,10 +308,10 @@ export func detect(data as bytes) {
     if (looksLikeDta($data)) {
         return "dta";
     }
-    if (binary.startsWith($data, convert.bytesFromString("utf-8", "$FL2"))) {
+    if (binary.startsWith($data, encoding.encode("utf-8", "$FL2"))) {
         return "sav";
     }
-    if (binary.startsWith($data, convert.bytesFromString("utf-8", "$FL3"))) {
+    if (binary.startsWith($data, encoding.encode("utf-8", "$FL3"))) {
         return "zsav";
     }
     if (looksLikeXpt($data)) {

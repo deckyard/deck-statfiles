@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - white-box tests for the sav topic. Spliced into
 # statfiles_test.j via include. Every expected value was checked against
@@ -106,11 +106,11 @@ func testSavReadStatPlain() {
     testing.assertEqual($lt.label, "A very long string");
     testing.assertEqual($lt.valueLabels, {"short": "a short one"});
     def col as list of string init textColumn($ds, "longtext");
-    testing.assertEqual($col[0], strings.repeat("a", 300));
-    testing.assertEqual($col[1], strings.repeat("b", 260) + "end");
+    testing.assertEqual($col[0], strings.replicate("a", 300));
+    testing.assertEqual($col[1], strings.replicate("b", 260) + "end");
     testing.assertEqual($col[2], "short");
     testing.assertEqual($col[3], "");
-    testing.assertEqual($col[4], strings.repeat("z", 290));
+    testing.assertEqual($col[4], strings.replicate("z", 290));
 
     testing.assertEqual(variable($ds, "born").format, "DATE11");
     testing.assertEqual(
@@ -165,7 +165,7 @@ func testSavPspp() {
     testing.assertEqual($t.valueLabels, {"short": "very long label key"});
     testing.assertEqual(
         $ds.texts[5][1],
-        "long" + strings.repeat("ab", 120) + "|" + strings.repeat("1234567890", 5));
+        "long" + strings.replicate("ab", 120) + "|" + strings.replicate("1234567890", 5));
     testing.assertEqual($ds.texts[5][2], "");
     testing.assertEqual($ds.missing[5], ["user", "", "", ""]);
 
@@ -226,7 +226,7 @@ func testSavDetectAndRead() {
     testing.assertEqual(detect(savFixture(SAV_READSTAT_PLAIN)), "sav");
     testing.assertEqual(detect(savFixture(SAV_PSPP_ZSAV)), "zsav");
     testing.assertTrue(looksLikeSav(savFixture(SAV_HAND_BE)));
-    testing.assertFalse(looksLikeSav(convert.bytesFromString("utf-8", "$FL")));
+    testing.assertFalse(looksLikeSav(encoding.encode("utf-8", "$FL")));
     testing.assertEqual(read(savFixture(SAV_PSPP_BYTECODE)).rowCount, 4);
     testing.assertTrue(strings.startsWith(
         toCsv(read(savFixture(SAV_HAND_BE)), true),
@@ -279,7 +279,7 @@ func testSavTruncated() {
         def data as bytes init savFixture($lines);
         for (def n in 0..len($data)) {
             if ($n % 41 == 0 or $n > len($data) - 16) {
-                testing.assertEqual(savKind(binary.slice($data, 0, $n), options()), "statfiles");
+                testing.assertEqual(savKind($data[..$n], options()), "statfiles");
             }
         }
     }

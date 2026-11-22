@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - white-box tests for the sas7bdat topic. Spliced into
 # statfiles_test.j via include. The expected values of the testSas7<sample>
@@ -1362,7 +1362,7 @@ func testSas7Detect() {
     def catalog as bytes init sas7Fixture(SAS7_CATALOG_TAGGED);
     testing.assertEqual(detect($data), "sas7bdat");
     testing.assertEqual(detect($catalog), "sas7bcat");
-    testing.assertFalse(looksLikeSas7bdat(binary.slice($data, 0, 31)));
+    testing.assertFalse(looksLikeSas7bdat($data[..31]));
     testing.assertFalse(looksLikeSas7bdat(binary.make(64)));
     testing.assertFalse(looksLikeSas7bcat($data));
     def ds as Dataset init read($data);
@@ -1446,11 +1446,11 @@ func testSas7Rle() {
     def abc as list of int init [0x61, 0x62, 0x63];
     testing.assertEqual(sas7UnpackText(lists.concat([0x82], $abc), 3, "rle"), "abc");
     testing.assertEqual(sas7UnpackText([0xE1, 0xC0, 0x41, 0xF0], 8, "rle"), "   AAA\u0000\u0000");
-    testing.assertEqual(sas7UnpackText([0x50, 0x00], 17, "rle"), strings.repeat("@", 17));
-    testing.assertEqual(sas7UnpackText([0x40, 0x02, 0x7A], 20, "rle"), strings.repeat("z", 20));
+    testing.assertEqual(sas7UnpackText([0x50, 0x00], 17, "rle"), strings.replicate("@", 17));
+    testing.assertEqual(sas7UnpackText([0x40, 0x02, 0x7A], 20, "rle"), strings.replicate("z", 20));
     testing.assertEqual(
         sas7UnpackText([0x60, 0x01, 0xD0], 20, "rle"),
-        strings.repeat(" ", 18) + "@@");
+        strings.replicate(" ", 18) + "@@");
     def long as list of int init [0x00, 0x00];
     def copy96 as list of int init [0x20];
     for (def i in 0..96) {
@@ -1459,8 +1459,8 @@ func testSas7Rle() {
         }
         $copy96[] = 0x79;
     }
-    testing.assertEqual(sas7UnpackText($long, 64, "rle"), strings.repeat("x", 64));
-    testing.assertEqual(sas7UnpackText($copy96, 96, "rle"), strings.repeat("y", 96));
+    testing.assertEqual(sas7UnpackText($long, 64, "rle"), strings.replicate("x", 64));
+    testing.assertEqual(sas7UnpackText($copy96, 96, "rle"), strings.replicate("y", 96));
     testing.assertEqual(sas7UnpackKind([0x30], 3, "rle"), ERROR_KIND);
     testing.assertEqual(sas7UnpackKind([0x82, 0x61], 3, "rle"), ERROR_KIND);
     testing.assertEqual(sas7UnpackKind([0xC0], 3, "rle"), ERROR_KIND);
@@ -1475,7 +1475,7 @@ func testSas7Rdc() {
     testing.assertEqual(sas7UnpackText([0x80, 0x00, 0x00, 0x41], 3, "rdc"), "AAA");
     testing.assertEqual(
         sas7UnpackText([0x80, 0x00, 0x10, 0x01, 0x42], 35, "rdc"),
-        strings.repeat("B", 35));
+        strings.replicate("B", 35));
     # literals, then a copy of 3 bytes from 3 back
     testing.assertEqual(
         sas7UnpackText([0x10, 0x00, 0x61, 0x62, 0x63, 0x30, 0x00], 6, "rdc"),
@@ -1486,7 +1486,7 @@ func testSas7Rdc() {
         "abcabcabc");
     testing.assertEqual(
         sas7UnpackText([0x10, 0x00, 0x61, 0x62, 0x63, 0x20, 0x00, 0x04], 23, "rdc"),
-        strings.repeat("abc", 7) + "ab");
+        strings.replicate("abc", 7) + "ab");
     # a copy from before the start, a command cut short, a stray byte, too
     # long and too short
     testing.assertEqual(sas7UnpackKind([0x80, 0x00, 0x30, 0x00], 3, "rdc"), ERROR_KIND);
@@ -1504,11 +1504,11 @@ func testSas7Truncated() {
     def data as bytes init sas7Fixture(SAS7_FILE_WIDTHS_BE);
     for (def cut in 0..len($data)) {
         if ($cut % 97 == 0 or $cut < 300 or $cut % 4096 == 0 or $cut % 4096 == 4095) {
-            testing.assertEqual(sas7ErrorKind(binary.slice($data, 0, $cut), options()), ERROR_KIND);
+            testing.assertEqual(sas7ErrorKind($data[..$cut], options()), ERROR_KIND);
         }
     }
     # a file cut at a page boundary with the page count lowered loses rows
-    def short as bytes init sas7Patch(binary.slice($data, 0, 12288), 208, [0, 0, 0, 0, 0, 0, 0, 1]);
+    def short as bytes init sas7Patch($data[..12288], 208, [0, 0, 0, 0, 0, 0, 0, 1]);
     testing.assertTrue(strings.contains(
         sas7ErrorMessage($short, options()),
         "declares 12 rows but holds 0"));

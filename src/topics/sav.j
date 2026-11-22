@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - the sav topic: SPSS .sav and .zsav. Spliced into statfiles.j via include.
 #
@@ -161,8 +161,8 @@ def struct SavDict {
  * @return {bool} true when it is
  */
 func looksLikeSav(data as bytes) {
-    return binary.startsWith($data, convert.bytesFromString("utf-8", "$FL2")) or
-        binary.startsWith($data, convert.bytesFromString("utf-8", "$FL3"));
+    return binary.startsWith($data, encoding.encode("utf-8", "$FL2")) or
+        binary.startsWith($data, encoding.encode("utf-8", "$FL3"));
 }
 
 /**
@@ -243,8 +243,8 @@ func savFormat(code as int) {
  */
 func savDictionary(data as bytes) {
     need($data, 0, SAV_HEADER_SIZE, "the file header");
-    def zsav as bool init binary.startsWith($data, convert.bytesFromString("utf-8", "$FL3"));
-    if (not $zsav and not binary.startsWith($data, convert.bytesFromString("utf-8", "$FL2"))) {
+    def zsav as bool init binary.startsWith($data, encoding.encode("utf-8", "$FL3"));
+    if (not $zsav and not binary.startsWith($data, encoding.encode("utf-8", "$FL2"))) {
         fail("not an SPSS system file");
     }
     def o as string init "le";
@@ -267,7 +267,7 @@ func savDictionary(data as bytes) {
         compression: $compression,
         bias: savFloat($data, $o, 84, "the file header"),
         cases: binary.readInt($o, $data, 80, 4),
-        label: binary.slice($data, 109, 173),
+        label: $data[109..173],
         slots: 0,
         raws: [],
         slotRaw: [],
@@ -302,7 +302,7 @@ func savDictionary(data as bytes) {
                 def hasLabel as int init binary.readInt($o, $data, $pos + 4, 4);
                 def nmiss as int init binary.readInt($o, $data, $pos + 8, 4);
                 def raw as SavRaw init SavRaw{
-                    name: binary.slice($data, $pos + 20, $pos + 28),
+                    name: $data[$pos + 20..$pos + 28],
                     width: $typ,
                     slot: $d.slots,
                     label: binary.make(0),
@@ -318,7 +318,7 @@ func savDictionary(data as bytes) {
                         fail("a negative variable label length");
                     }
                     need($data, $pos + 4, ($n + 3) // 4 * 4, "a variable label");
-                    $raw.label = binary.slice($data, $pos + 4, $pos + 4 + $n);
+                    $raw.label = $data[$pos + 4..$pos + 4 + $n];
                     $pos = $pos + 4 + ($n + 3) // 4 * 4;
                 } elseif ($hasLabel != 0) {
                     fail(io.sprintf("a variable label flag %d", $hasLabel));
@@ -337,7 +337,7 @@ func savDictionary(data as bytes) {
                     if ($typ == 0) {
                         $raw.missNum[] = savFloat($data, $o, $pos + $k * 8, "a missing value");
                     } else {
-                        $raw.missStr[] = binary.slice($data, $pos + $k * 8, $pos + $k * 8 + 8);
+                        $raw.missStr[] = $data[$pos + $k * 8..$pos + $k * 8 + 8];
                     }
                 }
                 $pos = $pos + $count * 8;
@@ -370,8 +370,8 @@ func savDictionary(data as bytes) {
                     def ll as int init $data[$pos + 8];
                     def padded as int init ($ll + 8) // 8 * 8;
                     need($data, $pos + 8, $padded, "a value label");
-                    $set.values[] = binary.slice($data, $pos, $pos + 8);
-                    $set.labels[] = binary.slice($data, $pos + 9, $pos + 9 + $ll);
+                    $set.values[] = $data[$pos..$pos + 8];
+                    $set.labels[] = $data[$pos + 9..$pos + 9 + $ll];
                     $pos = $pos + 8 + $padded;
                 }
                 if (savInt($data, $o, $pos, "a value-label variables record") != 4) {
@@ -429,8 +429,8 @@ func savDictionary(data as bytes) {
                             $pos + 16,
                             "the machine floating-point record");
                     }
-                    when 13 { $d.longNames = binary.slice($data, $pos, $pos + $total); }
-                    when 14 { $d.veryLong = binary.slice($data, $pos, $pos + $total); }
+                    when 13 { $d.longNames = $data[$pos..$pos + $total]; }
+                    when 14 { $d.veryLong = $data[$pos..$pos + $total]; }
                     when 16 {
                         if ($size != 8 or $count != 2) {
                             fail("an extended case count record of the wrong size");
@@ -442,9 +442,9 @@ func savDictionary(data as bytes) {
                             }
                         }
                     }
-                    when 20 { $d.charset = binary.slice($data, $pos, $pos + $total); }
-                    when 21 { $d.longLabels[] = binary.slice($data, $pos, $pos + $total); }
-                    when 22 { $d.longMissing[] = binary.slice($data, $pos, $pos + $total); }
+                    when 20 { $d.charset = $data[$pos..$pos + $total]; }
+                    when 21 { $d.longLabels[] = $data[$pos..$pos + $total]; }
+                    when 22 { $d.longMissing[] = $data[$pos..$pos + $total]; }
                 }
                 $pos = $pos + $total;
             }
@@ -534,8 +534,8 @@ func savPairs(text as bytes, cs as string, what as string) {
         if ($at < 1) {
             fail("a malformed entry in the " + $what);
         }
-        $out[] = strings.substring($item, 0, $at);
-        $out[] = strings.substring($item, $at + 1, len($item));
+        $out[] = $item[..$at];
+        $out[] = $item[$at + 1..len($item)];
     }
     return $out;
 }
@@ -653,7 +653,7 @@ func savBytecode(buf as bytes, start as int, d as SavDict, nvars as int, opts as
     while ($going) {
         if ($ci == 8) {
             if ($run >= 0) {
-                $parts[] = binary.slice($buf, $run, $p);
+                $parts[] = $buf[$run..$p];
                 $run = -1;
             }
             if ($p == $n and $slot == 0 and $cases < 0) {
@@ -668,7 +668,7 @@ func savBytecode(buf as bytes, start as int, d as SavDict, nvars as int, opts as
             # fast path: eight raw slots, none past the declared cases
             if ($p + 64 <= $n and binary.readInt("le", $buf, $block, 8) == SAV_ALL_RAW and
                 ($cases < 0 or $rows * $slots + $slot + 8 <= $cases * $slots)) {
-                $parts[] = binary.slice($buf, $p, $p + 64);
+                $parts[] = $buf[$p..$p + 64];
                 $p = $p + 64;
                 $ci = 8;
                 $slot = $slot + 8;
@@ -697,7 +697,7 @@ func savBytecode(buf as bytes, start as int, d as SavDict, nvars as int, opts as
             continue;
         } else {
             if ($run >= 0) {
-                $parts[] = binary.slice($buf, $run, $p);
+                $parts[] = $buf[$run..$p];
                 $run = -1;
             }
             if ($c == 254) {
@@ -736,7 +736,7 @@ func savBytecode(buf as bytes, start as int, d as SavDict, nvars as int, opts as
         }
     }
     if ($run >= 0) {
-        $parts[] = binary.slice($buf, $run, $p);
+        $parts[] = $buf[$run..$p];
     }
     savCheckTail($buf, $block, $ci, $p);
     $chunks[] = binary.join($parts);
@@ -889,7 +889,7 @@ func savUnzip(data as bytes, d as SavDict, opts as Options) {
         try {
             $out = compress.unpack(
                 "zlib",
-                binary.slice($data, $at, $at + $entries[3 * $k + 1]),
+                $data[$at..$at + $entries[3 * $k + 1]],
                 $opts.maxBytes - $used);
         } catch (e) {
             if ($e.kind == "limit") {
@@ -1096,16 +1096,14 @@ export func readSav(data as bytes, opts as Options) {
                 if ($vl < 0) {
                     fail("a negative length in the long string value labels");
                 }
-                def key as string init decodeText(binary.slice($rec, $p + 4, $p + 4 + $vl), $cs);
+                def key as string init decodeText($rec[$p + 4..$p + 4 + $vl], $cs);
                 $p = $p + 4 + $vl;
                 def ll as int init savInt($rec, $d.order, $p, "long string value labels");
                 need($rec, $p + 4, $ll, "long string value labels");
                 if ($ll < 0) {
                     fail("a negative length in the long string value labels");
                 }
-                $vars[$vi].valueLabels[$key] = decodeText(
-                    binary.slice($rec, $p + 4, $p + 4 + $ll),
-                    $cs);
+                $vars[$vi].valueLabels[$key] = decodeText($rec[$p + 4..$p + 4 + $ll], $cs);
                 $p = $p + 4 + $ll;
             }
         }
@@ -1132,7 +1130,7 @@ export func readSav(data as bytes, opts as Options) {
             }
             need($rec, $p, $n * $vl, "long string missing values");
             for (def k in 0..$n) {
-                $vars[$vi].missingValues[] = decodeText(binary.slice($rec, $p, $p + $vl), $cs);
+                $vars[$vi].missingValues[] = decodeText($rec[$p..$p + $vl], $cs);
                 $p = $p + $vl;
             }
         }
@@ -1251,16 +1249,13 @@ export func readSav(data as bytes, opts as Options) {
                 def at as int init $base + $row * $caseSize;
                 def cell as bytes;
                 if ($nseg == 1) {
-                    $cell = binary.slice($flat, $at + $segSlots[0], $at + $segSlots[0] + $w);
+                    $cell = $flat[$at + $segSlots[0]..$at + $segSlots[0] + $w];
                 } else {
                     def pieces as list of bytes init [];
                     for (def k in 0..$nseg) {
-                        $pieces[] = binary.slice(
-                            $flat,
-                            $at + $segSlots[$k],
-                            $at + $segSlots[$k] + $segSizes[$k]);
+                        $pieces[] = $flat[$at + $segSlots[$k]..$at + $segSlots[$k] + $segSizes[$k]];
                     }
-                    $cell = binary.slice(binary.join($pieces), 0, $w);
+                    $cell = binary.join($pieces)[..$w];
                 }
                 def s as string init decodeText($cell, $cs);
                 $col[] = $s;
@@ -1345,7 +1340,7 @@ func savLongVar(
         fail("an empty variable name in the " + $what);
     }
     need($rec, $p + 4, $n, $what);
-    def vname as string init decodeText(binary.slice($rec, $p + 4, $p + 4 + $n), $cs);
+    def vname as string init decodeText($rec[$p + 4..$p + 4 + $n], $cs);
     if (not maps.has($nameAt, $vname)) {
         fail("the " + $what + " name a variable the file lacks: " + $vname);
     }

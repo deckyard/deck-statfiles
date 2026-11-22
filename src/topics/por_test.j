@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - white-box tests for the por topic. Spliced into
 # statfiles_test.j via include. The values were checked against
@@ -42,7 +42,7 @@ func porKind(data as bytes, opts as Options) {
  */
 func porParse(text as string) {
     def c as PorCursor init PorCursor{pos: 0, num: 0.0, sysmis: false};
-    return porNumber(convert.bytesFromString("utf-8", $text), $c);
+    return porNumber(encoding.encode("utf-8", $text), $c);
 }
 
 /**
@@ -149,7 +149,7 @@ func testPorPspp() {
     testing.assertEqual($t.missingValues, ["short", "x"]);
     testing.assertEqual(
         $ds.texts[5][1],
-        "long" + strings.repeat("ab", 120) + "|" + strings.repeat("1234567890", 1));
+        "long" + strings.replicate("ab", 120) + "|" + strings.replicate("1234567890", 1));
     testing.assertEqual($ds.missing[5], ["user", "", "", ""]);
     testing.assertEqual($ds.missing[6], ["", "", ".", ""]);
 }
@@ -194,7 +194,7 @@ func testPorTruncated() {
         def data as bytes init porFixture($lines);
         for (def n in 0..len($data) - 82) {
             if ($n % 23 == 0) {
-                testing.assertEqual(porKind(binary.slice($data, 0, $n), options()), "statfiles");
+                testing.assertEqual(porKind($data[..$n], options()), "statfiles");
             }
         }
     }
@@ -208,7 +208,7 @@ func testPorMalformed() {
     testing.assertEqual(porKind($bad, options()), "statfiles");
     $bad = binary.concat(binary.make(81, 32), $data);
     testing.assertEqual(porKind($bad, options()), "statfiles");
-    $bad = binary.concat($data, convert.bytesFromString("utf-8", "1/"));
+    $bad = binary.concat($data, encoding.encode("utf-8", "1/"));
     testing.assertEqual(porKind($bad, options()), "statfiles");
     for (def p in POR_RECORDS_AT..len($data)) {
         if ($p % 3 == 0) {

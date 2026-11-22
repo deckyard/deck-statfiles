@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - white-box tests for the dataset topic. Spliced into
 # statfiles_test.j via include.
@@ -172,7 +172,7 @@ func testCharsetNamesRefuseMissingCodecs() {
 }
 
 func testDecodeText() {
-    def b as bytes init convert.bytesFromString("utf-8", "Grün  ");
+    def b as bytes init encoding.encode("utf-8", "Grün  ");
     $b[] = 0;
     $b[] = 0;
     testing.assertEqual(decodeText($b, "utf-8"), "Grün");
@@ -203,11 +203,11 @@ func testDecodeTextRefusesBytesTheCharsetLacks() {
 }
 
 func testReadRefusesUnknownData() {
-    testing.assertEqual(detect(convert.bytesFromString("utf-8", "hello")), "");
-    testing.assertEqual(detect(convert.bytesFromString("utf-8", "$FL2...")), "sav");
-    testing.assertEqual(detect(convert.bytesFromString("utf-8", "$FL3...")), "zsav");
+    testing.assertEqual(detect(encoding.encode("utf-8", "hello")), "");
+    testing.assertEqual(detect(encoding.encode("utf-8", "$FL2...")), "sav");
+    testing.assertEqual(detect(encoding.encode("utf-8", "$FL3...")), "zsav");
     try {
-        read(convert.bytesFromString("utf-8", "hello"));
+        read(encoding.encode("utf-8", "hello"));
         missed();
     } catch (e) {
         testing.assertEqual($e.kind, ERROR_KIND);

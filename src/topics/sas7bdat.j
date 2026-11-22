@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # statfiles - the sas7bdat topic: SAS data sets (.sas7bdat). SAS does not
 # document the format; this follows the reverse engineering of ReadStat
@@ -319,7 +319,7 @@ func looksLikeSas7bdat(data as bytes) {
     if (len($data) < 32) {
         return false;
     }
-    def magic as bytes init binary.slice($data, 0, 32);
+    def magic as bytes init $data[..32];
     return $magic == encoding.fromText("hex", SAS7_MAGIC) or
         $magic == encoding.fromText("hex", SAS7_MAGIC_ALT);
 }
@@ -332,7 +332,7 @@ func looksLikeSas7bdat(data as bytes) {
  */
 func looksLikeSas7bcat(data as bytes) {
     return len($data) >= 32 and
-        binary.slice($data, 0, 32) == encoding.fromText("hex", SAS7_MAGIC_CATALOG);
+        $data[..32] == encoding.fromText("hex", SAS7_MAGIC_CATALOG);
 }
 
 /**
@@ -431,7 +431,7 @@ func sas7Head(data as bytes, opts as Options) {
             $pageCount,
             $pageSize));
     }
-    def release as string init encoding.decode("iso-8859-1", binary.slice($data, $at, $at + 8));
+    def release as string init encoding.decode("iso-8859-1", $data[$at..$at + 8]);
     def m as regex.Match init regex.find('^([1-9V])\.([0-9]{4})([A-Z])([0-9A-Z])$', $release);
     if ($m.start < 0) {
         fail("the SAS release in the header is not a release (" + strings.trim($release) + ")");
@@ -458,7 +458,7 @@ func sas7Head(data as bytes, opts as Options) {
         release: $release,
         statTransfer: ($major == "8" or $major == "9") and $m.groups[1] == "0000" and
             ($revision == "0" or $revision == "K"),
-        name: binary.slice($data, 92, 124),
+        name: $data[92..124],
         charset: ""
     };
     if ($u64) {
@@ -713,7 +713,7 @@ func sas7Meta(data as bytes, head as Sas7Head, pages as Sas7Pages) {
             def at as int init $pages.ptrOffsets[$i];
             def size as int init $pages.ptrLengths[$i];
             sas7Remainder($data, $at, $size, $head, "column text");
-            $m.texts[] = binary.slice($data, $at + $sig, $at + $size);
+            $m.texts[] = $data[$at + $sig..$at + $size];
         }
     }
     for (def i in 0..len($pages.ptrKinds)) {
@@ -908,7 +908,7 @@ func sas7TextBytes(m as Sas7Meta, refs as list of int, i as int) {
     if ($idx >= len($m.texts) or $off + $n > len($m.texts[$idx])) {
         fail(io.sprintf("a text reference (%d, %d, %d) outside the column text", $idx, $off, $n));
     }
-    return binary.slice($m.texts[$idx], $off, $off + $n);
+    return $m.texts[$idx][$off..$off + $n];
 }
 
 /**
@@ -1059,10 +1059,7 @@ func sas7Rows(
                     if ($size != $rl) {
                         fail(io.sprintf("a row subheader of %d bytes, the rows are %d", $size, $rl));
                     }
-                    $row = binary.slice(
-                        $data,
-                        $pages.ptrOffsets[$i],
-                        $pages.ptrOffsets[$i] + $size);
+                    $row = $data[$pages.ptrOffsets[$i]..$pages.ptrOffsets[$i] + $size];
                 } elseif ($comp == SAS7_COMP_ROW) {
                     $row = sas7Unpack($data, $pages.ptrOffsets[$i], $size, $rl, $compression);
                 } elseif ($comp == SAS7_COMP_DELETED) {
@@ -1109,7 +1106,7 @@ func sas7Rows(
                     $rl));
             }
             if ($take > 0) {
-                $parts[] = binary.slice($data, $start, $start + $take * $rl);
+                $parts[] = $data[$start..$start + $take * $rl];
                 $got = $got + $take;
             }
             continue;
@@ -1150,7 +1147,7 @@ func sas7Rows(
             if ($got == $live) {
                 fail(io.sprintf("more rows than the %d the file declares", $live));
             }
-            $parts[] = binary.slice($data, $start + $r * $rl, $start + ($r + 1) * $rl);
+            $parts[] = $data[$start + $r * $rl..$start + ($r + 1) * $rl];
             $got = $got + 1;
         }
     }
@@ -1203,7 +1200,7 @@ func sas7Moved(
         if ($pages.ptrFlags[$i] == 0 or $pages.ptrKinds[$i] != SAS7_SH_DATA or $size != $rl) {
             fail(io.sprintf("a moved row on page %d that is not a row", $page + 1));
         }
-        return binary.slice($data, $pages.ptrOffsets[$i], $pages.ptrOffsets[$i] + $size);
+        return $data[$pages.ptrOffsets[$i]..$pages.ptrOffsets[$i] + $size];
     }
     if ($comp == SAS7_COMP_ROW_MOVED) {
         return sas7Unpack($data, $pages.ptrOffsets[$i], $size, $rl, $compression);
@@ -1293,7 +1290,7 @@ func sas7Rle(data as bytes, from as int, end as int, rl as int) {
         } else {
             fail(io.sprintf(
                 "an unknown command 0x%s in a compressed row",
-                convert.toString($control, 16)));
+                io.sprintf("%d|base=16", $control)));
         }
         if ($out + $copy + $insert > $rl) {
             fail(io.sprintf("a compressed row unpacks to more than %d bytes", $rl));
@@ -1302,7 +1299,7 @@ func sas7Rle(data as bytes, from as int, end as int, rl as int) {
             if ($at + $copy > $end) {
                 fail("a compressed row ends inside a run of literal bytes");
             }
-            $parts[] = binary.slice($data, $at, $at + $copy);
+            $parts[] = $data[$at..$at + $copy];
             $at = $at + $copy;
             $out = $out + $copy;
         } else {
@@ -1354,7 +1351,7 @@ func sas7Rdc(data as bytes, from as int, end as int, rl as int) {
                 if ($out + $n > $rl) {
                     fail(io.sprintf("a compressed row unpacks to more than %d bytes", $rl));
                 }
-                $parts[] = binary.slice($data, $at, $at + $n);
+                $parts[] = $data[$at..$at + $n];
                 $at = $at + $n;
                 $out = $out + $n;
                 $bit = $bit + $n;
@@ -1411,17 +1408,17 @@ func sas7Rdc(data as bytes, from as int, end as int, rl as int) {
             def from2 as int init len($sofar) - $back;
             $parts = [$sofar];
             if (len($sofar) > 2 * SAS7_RDC_WINDOW) {
-                $older[] = binary.slice($sofar, 0, len($sofar) - SAS7_RDC_WINDOW);
-                $parts = [binary.slice($sofar, len($sofar) - SAS7_RDC_WINDOW, len($sofar))];
+                $older[] = $sofar[..len($sofar) - SAS7_RDC_WINDOW];
+                $parts = [$sofar[len($sofar) - SAS7_RDC_WINDOW..len($sofar)]];
             }
             if ($copy <= $back) {
-                $parts[] = binary.slice($sofar, $from2, $from2 + $copy);
+                $parts[] = $sofar[$from2..$from2 + $copy];
             } else {
                 # an overlapping copy repeats the bytes it has just written
                 def done as int init 0;
                 while ($done < $copy) {
                     def n as int init math.min($copy - $done, $back);
-                    $parts[] = binary.slice($sofar, $from2, $from2 + $n);
+                    $parts[] = $sofar[$from2..$from2 + $n];
                     $done = $done + $n;
                 }
             }
@@ -1661,7 +1658,7 @@ func sas7Clean(flat as bytes, marked as bytes, rl as int) {
     def at as int init 0;
     while ($at < len($marked)) {
         def end as int init math.min($at + $step, len($marked));
-        def chunk as bytes init binary.slice($marked, $at, $end);
+        def chunk as bytes init $marked[$at..$end];
         $parts[] = binary.join(binary.split($chunk, $needle), $swapped);
         $at = $end;
     }
