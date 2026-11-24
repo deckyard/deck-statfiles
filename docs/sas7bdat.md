@@ -3,9 +3,9 @@
 
 # SAS data sets and format catalogs
 
-The deck reads SAS's own data sets (`.sas7bdat`) and the value labels of
+The deck reads SAS™'s own data sets (`.sas7bdat`) and the value labels of
 SAS format catalogs (`.sas7bcat`). SAS does not document either format;
-the readers follow the reverse engineering of ReadStat, parso, pandas and
+the readers follow the reverse engineering of ReadStat™, parso, pandas and
 Matthew Shotwell's notes for the sas7bdat R package, and were checked
 cell by cell against pyreadstat (ReadStat) and pandas on about 350
 sample files and 590 generated ones.
@@ -191,9 +191,10 @@ microseconds of its own. The GSS 2021 file (4,032 rows of 943 variables,
 most of them 3 to 6 bytes, 46% missing, RLE) takes about 35 seconds,
 most of it unpacking rows, and 4.9 GB of memory.
 
-Memory is about 1.2 KB per cell (the interpreter's values), so a file of
-20 million cells, the `maxCells` default, needs about 23 GB; lower
-`maxCells` to bound it. A large catalog is slow too: the GSS 2021
+Memory is about 1.2 KB per cell on Jennifer 0.27.0 and about 170 bytes from
+0.28.0 on (the interpreter's values), so a file of 2 million cells, the
+`maxCells` default, needs about 2.4 GB or 340 MB; set `maxCells` to what the
+machine can hold. A large catalog is slow too: the GSS 2021
 `formats.sas7bcat` (146 MB, 1,638 formats, about a million labels) takes
 about 50 seconds and 4 GB.
 

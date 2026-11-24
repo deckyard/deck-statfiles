@@ -3,7 +3,7 @@
 
 # Stata .dta
 
-`readDta` reads Stata datasets of every released format from 104 to 119 (Stata 15 and later, more than 32,767 variables), in either byte
+`readDta` reads Stata™ datasets of every released format from 104 to 119 (Stata 15 and later, more than 32,767 variables), in either byte
 order. `read` and `readWith` detect the format and call it for you.
 
 ```jennifer
@@ -48,7 +48,7 @@ A `float` keeps its single-precision value (`1.1` reads as
 `1.100000023841858`). Display formats are returned as written; dates stay
 numbers (days or milliseconds since 1960-01-01, as the format says).
 String values keep their trailing blanks (`"a "` reads as `"a "`, as in
-pandas and ReadStat): a `str<n>` value ends at its first NUL or the
+pandas and ReadStat™): a `str<n>` value ends at its first NUL or the
 field's end, and a strL is read as stored (an ASCII strL without its
 closing NUL). Variable and value labels lose trailing blanks.
 `missingValues` and `missingRange` stay

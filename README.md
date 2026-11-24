@@ -4,7 +4,7 @@
 [![Documentation](https://img.shields.io/badge/docs-github%20pages-blue)](https://deckyard.github.io/deck-statfiles/)
 [![release](https://img.shields.io/github/v/release/deckyard/deck-statfiles)](https://github.com/deckyard/deck-statfiles/releases/latest)
 
-Readers for the data files of SPSS, Stata and SAS, for
+Readers for the data files of SPSS™, Stata™ and SAS™, for
 [Jennifer](https://jennifer-lang.dev/) programs: Stata `.dta` (formats
 104 to 119), SPSS `.sav`, `.zsav` and portable `.por`, SAS XPORT `.xpt`
 (versions 5 and 8), and SAS data sets `.sas7bdat` with the value labels
@@ -57,3 +57,13 @@ LGPL-3.0-only, see [LICENSE](LICENSE). Copyright (C) 2026 mplx &lt;mplx@jennifer
 
 `tools/check-headers.sh` checks every source file's SPDX header against
 `deck.toml`.
+
+## Trademarks
+
+SAS™ is a trademark of SAS Institute Inc. SPSS™ and IBM™ are trademarks of
+International Business Machines Corporation. Stata™ is a trademark of
+StataCorp LLC. Other product and company names may be trademarks of their
+respective owners. They are used only to identify the products this deck
+works with. This deck is an independent project, not affiliated with,
+sponsored or endorsed by SAS Institute Inc., International Business Machines
+Corporation or StataCorp LLC.

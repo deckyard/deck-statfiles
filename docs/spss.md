@@ -3,7 +3,7 @@
 
 # SPSS: .sav, .zsav and .por
 
-`statfiles` reads the three SPSS data formats: the system file `.sav`
+`statfiles` reads the three SPSS™ data formats: the system file `.sav`
 (uncompressed or bytecode compressed), its zlib form `.zsav`, and the
 portable file `.por`. Each becomes one `Dataset`; nothing is written.
 
@@ -24,7 +24,7 @@ both `.sav` and `.zsav`.
 
 | SPSS | `Dataset` / `Variable` |
 |---|---|
-| file label | `label` (`.por` has none, except ReadStat's, which it writes after the splash) |
+| file label | `label` (`.por` has none, except ReadStat™'s, which it writes after the splash) |
 | character set | `encoding` |
 | variable name | `name`: the long name (record 7.13) in a `.sav`, the 8-character name in a `.por` |
 | variable label | `label` |
@@ -73,7 +73,7 @@ from, in this order:
 4. `windows-1252`.
 
 A `.por` stores text in the portable character set and maps it through the
-file's 256-byte translation table. Bytes the table does not name (PSPP
+file's 256-byte translation table. Bytes the table does not name (PSPP™
 writes non-ASCII text as raw UTF-8) are kept and decoded from
 `Options.encoding`, else from UTF-8 when the whole file is valid UTF-8, else
 from `windows-1252`.

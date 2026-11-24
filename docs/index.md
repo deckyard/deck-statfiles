@@ -4,8 +4,8 @@
 # @deckyard/statfiles
 
 Readers for the data files of the big statistics packages, so a Jennifer
-program can take study and survey data as it arrives: Stata `.dta`
-(formats 104 to 119), SPSS `.sav`, `.zsav` and portable `.por`, SAS
+program can take study and survey data as it arrives: Stata™ `.dta`
+(formats 104 to 119), SPSS™ `.sav`, `.zsav` and portable `.por`, SAS™
 XPORT `.xpt` (versions 5 and 8, the FDA submission format), and SAS data
 sets `.sas7bdat` with the value labels of `.sas7bcat` catalogs. Read-only:
 nothing is written. Pure Jennifer, no capability needed.
@@ -92,15 +92,15 @@ def ds as statfiles.Dataset init statfiles.readWith(fs.readBytes("old.dta"), $op
 
 A malformed or truncated file, an unknown format or a bad argument throws
 `Error{kind: "statfiles"}`; nothing is patched up silently. A file over a
-cap is kind `"limit"`: `Options.maxCells` (20 million cells by default)
+cap is kind `"limit"`: `Options.maxCells` (2 million cells by default)
 bounds every reader before it allocates, and `Options.maxBytes` (256 MiB)
 the size compressed SPSS cases unpack to (a few bytes of bytecode can
 stand for kilobytes of blank long strings).
 
-A read dataset takes about 1.2 KB of memory per cell (the interpreter's
-values, whatever the format), so a file of 20 million cells, the
-`maxCells` default, needs about 23 GB. Lower `maxCells` to what the
-machine can hold.
+A read dataset takes about 1.2 KB of memory per cell on Jennifer 0.27.0 and
+about 170 bytes from 0.28.0 on (the interpreter's values, whatever the
+format), so a file of 2 million cells, the `maxCells` default, needs about
+2.4 GB or 340 MB. Set `maxCells` to what the machine can hold.
 
 ```jennifer
 try {
@@ -126,3 +126,13 @@ Writing any format; SPSS multiple-response sets, attributes and
 documents; Stata notes and characteristics; SAS views, indexes and
 encrypted data sets, and catalog labels of ranges (see
 [SAS data sets and format catalogs](sas7bdat.md)).
+
+## Trademarks
+
+SAS™ is a trademark of SAS Institute Inc. SPSS™ and IBM™ are trademarks of
+International Business Machines Corporation. Stata™ is a trademark of
+StataCorp LLC. Other product and company names may be trademarks of their
+respective owners. They are used only to identify the products this deck
+works with. This deck is an independent project, not affiliated with,
+sponsored or endorsed by SAS Institute Inc., International Business Machines
+Corporation or StataCorp LLC.

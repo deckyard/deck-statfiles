@@ -13,7 +13,7 @@ import "@deckyard/statfiles/" as statfiles;
 A reader takes the file as `bytes` (`fs.readBytes`) and returns a
 `Dataset`. A malformed file or a bad argument throws
 `Error{kind: "statfiles"}`; a file over a cap (`Options.maxCells`, the
-unpacked size of compressed SPSS cases or of a compressed `.sas7bdat`, a
+unpacked size of compressed SPSS™ cases or of a compressed `.sas7bdat`, a
 `.sas7bcat`'s size or label count) is kind `"limit"`. A `name` is a variable's
 name exactly as stored; a `row` counts from 0.
 
@@ -22,7 +22,7 @@ name exactly as stored; a `row` counts from 0.
 | Constant | Value | Meaning |
 |---|---|---|
 | `ERROR_KIND` | `"statfiles"` | the kind of a malformed file or a bad argument |
-| `DEFAULT_MAX_CELLS` | `20000000` | the most cells (rows times variables) read |
+| `DEFAULT_MAX_CELLS` | `2000000` | the most cells (rows times variables) read |
 | `DEFAULT_MAX_BYTES` | `268435456` | the most bytes compressed SPSS cases or the rows of a compressed `.sas7bdat` unpack to |
 | `MISSING_SYSTEM` | `"."` | the code of a system-missing cell |
 | `MISSING_USER` | `"user"` | the code of a value SPSS declares missing |
@@ -37,10 +37,10 @@ name exactly as stored; a `row` counts from 0.
 | `readWith(data, opts)` | `Dataset` | the same with `Options` |
 | `options()` | `Options` | the defaults: the file's own encoding, `DEFAULT_MAX_CELLS`, `DEFAULT_MAX_BYTES` |
 | `detect(data)` | `string` | `dta`, `sav`, `zsav`, `por`, `xpt`, `sas7bdat`, `sas7bcat` (a catalog, which `read` refuses), or `""` for none of them |
-| `readDta(data, opts)` | `Dataset` | Stata `.dta`, formats 104 to 119, either byte order |
+| `readDta(data, opts)` | `Dataset` | Stata™ `.dta`, formats 104 to 119, either byte order |
 | `readSav(data, opts)` | `Dataset` | SPSS `.sav` (uncompressed or bytecode compressed, either byte order) or `.zsav` |
 | `readPor(data, opts)` | `Dataset` | SPSS portable `.por`, through its translation table |
-| `readXpt(data, opts)` | `Dataset` | SAS XPORT `.xpt`, version 5 or 8, of one member; several members are an error |
+| `readXpt(data, opts)` | `Dataset` | SAS™ XPORT `.xpt`, version 5 or 8, of one member; several members are an error |
 | `readXptMembers(data, opts)` | `list of Dataset` | every member of an XPORT file; `maxCells` caps them together |
 | `readSas7bdat(data, opts)` | `Dataset` | SAS `.sas7bdat`: 32- or 64-bit, either byte order, uncompressed, RLE or RDC; deleted rows left out |
 

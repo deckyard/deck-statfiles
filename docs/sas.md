@@ -3,7 +3,7 @@
 
 # SAS XPORT files
 
-The deck reads SAS transport files (`.xpt`) of versions 5 and 8: the
+The deck reads SAS™ transport files (`.xpt`) of versions 5 and 8: the
 format of SAS's XPORT engine and of the `%loc2xpt` macro, which the FDA
 requires for submissions. Version 5 limits names to 8 characters, labels to
 40 and strings to 200 bytes; version 8 allows 32-character names, longer
@@ -58,7 +58,7 @@ Value labels live in a separate formats catalog, which a transport file
 does not carry: `valueLabels` stays empty, as do `missingValues` and
 `missingRange`. The informat is not kept.
 
-Numbers are IBM System/360 hex floats. A value stored in fewer than 8
+Numbers are IBM™ System/360 hex floats. A value stored in fewer than 8
 bytes is padded with zero bytes. Every value written from an IEEE double
 reads back exactly. A fraction of more than 53 significant bits (possible
 only in files from a mainframe) loses its lowest bits, truncated as SAS's
@@ -88,7 +88,7 @@ returns the code.
 
 The format records no character set. Text is decoded from windows-1252
 unless `Options.encoding` names another; SAS writes the session encoding's
-Windows equivalent. Files written by pyreadstat or ReadStat from Python
+Windows equivalent. Files written by pyreadstat or ReadStat™ from Python
 strings are UTF-8:
 
 ```jennifer

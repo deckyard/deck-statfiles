@@ -8,12 +8,12 @@
 The deck reads the data files of the major statistics packages, the
 formats study and clinical data arrives in:
 
-- **Stata `.dta`**, versions 104 to 119 (tagged sections from 117, `strL`
+- **Stata™ `.dta`**, versions 104 to 119 (tagged sections from 117, `strL`
   in both layouts, value labels, both byte orders, `.a`-`.z`);
-- **SPSS `.sav` and `.zsav`** (the record types PSPP documents, very long
+- **SPSS™ `.sav` and `.zsav`** (the record types PSPP™ documents, very long
   strings, bytecode compression, zlib blocks, system-missing, declared
   missing values and ranges) and the portable **`.por`** format;
-- **SAS XPORT `.xpt`**, versions 5 and 8, several members through
+- **SAS™ XPORT `.xpt`**, versions 5 and 8, several members through
   `readXptMembers`;
 - **SAS `.sas7bdat`** and value labels from a **`.sas7bcat`** catalog.
 
@@ -57,7 +57,7 @@ Out of scope:
   blanks and are cut only at the first NUL, as pandas and pyreadstat do;
   Stata labels and every SPSS and SAS text are trimmed.
 - **Undocumented `.sas7bdat` from three readers.** The layout comes from
-  ReadStat, parso and pandas: 32- and 64-bit files, both byte orders, meta,
+  ReadStat™, parso and pandas: 32- and 64-bit files, both byte orders, meta,
   data, mix and AMD pages, RLE and RDC compression, moved and deleted rows,
   numbers in 3 to 8 bytes, missing values from NaN tags. Every 64-bit field
   is range-checked before arithmetic. Numbers are decoded in bulk: the NaN
@@ -75,7 +75,7 @@ Out of scope:
 - **Reference-reader quirks.** XPORT version 5 drops trailing all-blank
   rows inside the last 80-byte record (ReadStat's rule), so a genuine
   all-blank last row is lost; version 8 uses the stated row count. Values
-  past the IBM float range read as the IBM maximum. A `.por` written by
+  past the IBM™ float range read as the IBM maximum. A `.por` written by
   PSPP's `x THRU HI` bug is read as written.
 - **Values, labels and CSV.** `labelOf` gives a cell's value label;
   `toCsv` writes the dataset with values or labels through the bundled
@@ -91,7 +91,7 @@ deck reads no server and has no error struct.
 
 ## Security and limits
 
-- `Options.maxCells` (`DEFAULT_MAX_CELLS`, 20 million) bounds the cells of
+- `Options.maxCells` (`DEFAULT_MAX_CELLS`, 2 million) bounds the cells of
   a data set and the labels of a catalog, checked before they are read.
 - `Options.maxBytes` (`DEFAULT_MAX_BYTES`, 256 MiB) bounds the `.zsav`
   zlib blocks, the expansion of SPSS bytecode (one code byte can stand for
@@ -109,7 +109,7 @@ deck reads no server and has no error struct.
   pyreadstat 1.3.8, pandas, PSPP 2.0.1 and hand-made writers, plus
   third-party samples from pandas, parso, ReadStat, pyreadstat and haven
   (each with source, commit and licence) and one SAS 9.3 file from
-  phuse-scripts (CDISC pilot data). Every fixture was checked value for
+  phuse-scripts (CDISC™ pilot data). Every fixture was checked value for
   value against pyreadstat or pandas.
 - Validation on 2026-11-14, with scripts kept outside the deck: about
   3,500 random files (Stata 104 to 119 in both byte orders, `.sav`,
