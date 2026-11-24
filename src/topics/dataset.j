@@ -10,7 +10,7 @@
 export def const ERROR_KIND as string init "statfiles";
 
 /** The most cells (rows times variables) a reader takes unless `Options.maxCells` says otherwise. */
-export def const DEFAULT_MAX_CELLS as int init 20000000;
+export def const DEFAULT_MAX_CELLS as int init 2000000;
 
 /** The most bytes compressed SPSS cases (`.zsav`, bytecode) may unpack to unless `Options.maxBytes` says otherwise. */
 export def const DEFAULT_MAX_BYTES as int init 268435456;

@@ -193,7 +193,8 @@ func testSas7CatalogErrors() {
     def one as bytes init sas7Patch($data[..1024 + 4096], 208, [1, 0, 0, 0]);
     testing.assertEqual(sas7cErrorKind($one, options()), ERROR_KIND);
     # every byte of the pages holding the blocks, inverted: an error of
-    # kind statfiles, or a catalog that still reads
+    # kind statfiles, a count past maxCells ("limit"), or a catalog that
+    # still reads
     for (def at in 1024 + 3 * 4096..len($data)) {
         if ($at % 3 != 0) {
             continue;
@@ -201,6 +202,6 @@ func testSas7CatalogErrors() {
         def kind as string init sas7cErrorKind(
             sas7Patch($data, $at, [$data[$at] ^ 0xFF]),
             options());
-        testing.assertTrue($kind == "" or $kind == ERROR_KIND);
+        testing.assertTrue($kind == "" or $kind == ERROR_KIND or $kind == "limit");
     }
 }
