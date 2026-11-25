@@ -39,7 +39,7 @@ fs.writeString("survey.csv", statfiles.toCsv($ds, true));
 
 ## Requirements
 
-Jennifer 0.27.0 or newer. No capability: the readers take the file as
+Jennifer 0.28.0 or newer. No capability: the readers take the file as
 `bytes`, so reading it from disk is the caller's.
 
 ## Development

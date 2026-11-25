@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.27.0
+# pragma-jennifer-version: >=0.28.0
 
 # statfiles - the sav topic: SPSS .sav and .zsav. Spliced into statfiles.j via include.
 #
@@ -886,11 +886,17 @@ func savUnzip(data as bytes, d as SavDict, opts as Options) {
         def at as int init $entries[3 * $k];
         def size as int init $entries[3 * $k + 2];
         def out as bytes;
+        # what is left of the budget; never 0, which unpackWith reads as its
+        # default cap
+        def left as int init $opts.maxBytes - $used;
+        if ($left < 1) {
+            $left = 1;
+        }
         try {
-            $out = compress.unpack(
+            $out = compress.unpackWith(
                 "zlib",
                 $data[$at..$at + $entries[3 * $k + 1]],
-                $opts.maxBytes - $used);
+                compress.UnpackOptions{maxBytes: $left});
         } catch (e) {
             if ($e.kind == "limit") {
                 throw $e;

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.27.0
+# pragma-jennifer-version: >=0.28.0
 
 # statfiles - the dta topic: Stata .dta, the released formats 104 to 119.
 # Spliced into statfiles.j via include. Formats 104 to 115 have a fixed

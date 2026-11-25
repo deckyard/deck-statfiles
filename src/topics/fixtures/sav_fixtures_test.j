@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.27.0
+# pragma-jennifer-version: >=0.28.0
 
 # statfiles - SPSS .sav and .zsav sample files as base64, for the overlays. Written by
 # pyreadstat 1.3.8 (ReadStat), PSPP 2.0.1, and by hand where neither writes

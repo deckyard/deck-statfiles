@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.27.0
+# pragma-jennifer-version: >=0.28.0
 
 # statfiles - SAS data sets and format catalogs as gzip-compressed base64,
 # for the sas7bdat and sas7bcat overlays (the files are mostly empty page

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.27.0
+# pragma-jennifer-version: >=0.28.0
 
 # statfiles - the sas7bcat topic: the value labels of SAS format catalogs
 # (.sas7bcat), as ReadStat reads them, and attaching them to a data set.
