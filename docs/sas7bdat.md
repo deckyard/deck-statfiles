@@ -182,21 +182,20 @@ try {
 }
 ```
 
-Reading 10,000 rows of 20 variables (16 numbers, 4 strings) takes about
-0.7 to 1 second from an uncompressed file, 2.1 seconds from an
-RLE-compressed one and 3.3 seconds from an RDC-compressed one: the
-compressed rows are unpacked one command at a time. Numbers are converted
+Measured on Jennifer 0.27.0, reading 10,000 rows of 20 variables (16
+numbers, 4 strings) takes about 0.7 to 1 second from an uncompressed file,
+2.1 seconds from an RLE-compressed one and 3.3 seconds from an
+RDC-compressed one: the compressed rows are unpacked one command at a time. Numbers are converted
 in bulk, those stored in 3 to 7 bytes too; a missing value costs a few
 microseconds of its own. The GSS 2021 file (4,032 rows of 943 variables,
 most of them 3 to 6 bytes, 46% missing, RLE) takes about 35 seconds,
 most of it unpacking rows, and 4.9 GB of memory.
 
-Memory is about 1.2 KB per cell on Jennifer 0.27.0 and about 170 bytes from
-0.28.0 on (the interpreter's values), so a file of 2 million cells, the
-`maxCells` default, needs about 2.4 GB or 340 MB; set `maxCells` to what the
-machine can hold. A large catalog is slow too: the GSS 2021
-`formats.sas7bcat` (146 MB, 1,638 formats, about a million labels) takes
-about 50 seconds and 4 GB.
+Memory is about 0.2 KB per cell on Jennifer 0.28.0 (the interpreter's
+values), so a file of 2 million cells, the `maxCells` default, needs about
+0.5 GB; set `maxCells` to what the machine can hold. A large catalog is slow
+too: the GSS 2021 `formats.sas7bcat` (146 MB, 1,638 formats, about a million
+labels) took about 50 seconds and 4 GB on Jennifer 0.27.0.
 
 ## Not covered
 

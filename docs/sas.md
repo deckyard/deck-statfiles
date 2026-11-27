@@ -140,4 +140,4 @@ try {
 }
 ```
 
-Reading takes about 1.2 seconds for 10,000 rows of 20 variables.
+Reading takes about 0.6 seconds for 10,000 rows of 20 variables.

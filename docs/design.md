@@ -99,8 +99,8 @@ deck reads no server and has no error struct.
 - Every offset, length and count read from a file is checked against what
   is left before use; `.sas7bcat` block chains must stay within their page
   and the file, since a looping chain was unbounded work.
-- Memory is about 1.2 KB per cell whatever the format, so the default cell
-  cap still allows a large footprint; lower it for untrusted files.
+- Memory is about 0.2 KB per cell whatever the format, about 0.5 GB at the
+  default cell cap; lower it for untrusted files.
 
 ## Testing and validation
 
@@ -120,9 +120,15 @@ deck reads no server and has no error struct.
   labels match the GSS Stata release for 941 of 942 variables. About
   124,000 truncated or mutated inputs, and 38,000 corrupted SAS files, gave
   only `statfiles` or `limit`.
-- Timing for 10k rows by 20 variables: about 0.5 s for `.dta`, 0.6 to
-  1.2 s for SPSS, 1.2 s for XPORT, 0.7 to 3.3 s for `.sas7bdat` (RDC
-  slowest) and about 8 s for `.por`.
+- Timing for 10k rows by 20 variables, on Jennifer 0.28.0 unless noted:
+
+  | Format | Time |
+  |---|---|
+  | `.dta` | about 0.05 s |
+  | SPSS `.sav` | 0.15 s; compressed about 0.5 s (estimate) |
+  | XPORT | about 0.6 s |
+  | `.sas7bdat` | 0.7 to 3.3 s (RDC slowest; Jennifer 0.27.0) |
+  | `.por` | about 4 s |
 
 Not covered: files written by the vendors' own software are represented by
 the third-party samples and real data sets above, not generated at test

@@ -122,7 +122,8 @@ try {
 Uncompressed numeric columns are read with one `binary.readFloats` call
 each. Compressed cases are first rebuilt in the uncompressed layout. On a
 10000 by 20 file (16 numeric, 4 string variables) an uncompressed `.sav`
-reads in about 0.6 s, a bytecode or zlib compressed one in about 1.2 s.
-A `.por` of the same table takes about 8 s, most of it in base-30 numbers,
+reads in about 0.15 s, a bytecode or zlib compressed one in about 0.5 s (an
+estimate, not measured).
+A `.por` of the same table takes about 4 s, most of it in base-30 numbers,
 each read to the nearest float (in `decimal` when it has more digits than
 a float holds exactly).

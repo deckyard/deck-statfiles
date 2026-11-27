@@ -117,5 +117,5 @@ anything is allocated. Everything else that is wrong throws kind
   it
 
 Numeric columns are read in bulk, one call per column; reading 10,000 rows of
-20 variables (16 numeric, 4 string) takes about 0.5 s, most of it in the
+20 variables (16 numeric, 4 string) takes about 0.05 s, most of it in the
 string columns.

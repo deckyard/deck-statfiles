@@ -97,10 +97,9 @@ bounds every reader before it allocates, and `Options.maxBytes` (256 MiB)
 the size compressed SPSS cases unpack to (a few bytes of bytecode can
 stand for kilobytes of blank long strings).
 
-A read dataset takes about 1.2 KB of memory per cell on Jennifer 0.27.0 and
-about 170 bytes from 0.28.0 on (the interpreter's values, whatever the
-format), so a file of 2 million cells, the `maxCells` default, needs about
-2.4 GB or 340 MB. Set `maxCells` to what the machine can hold.
+A read dataset takes about 0.2 KB of memory per cell (the interpreter's
+values, whatever the format), so a file of 2 million cells, the `maxCells`
+default, needs about 0.5 GB. Set `maxCells` to what the machine can hold.
 
 ```jennifer
 try {
@@ -112,13 +111,18 @@ try {
 
 ## Speed
 
-The readers are pure Jennifer, so a large file takes a while: 10,000 rows
-of 20 variables (16 numeric, 4 string) read in about 0.5 s from a Stata
-file, 0.6 s from an uncompressed `.sav`, 0.7 s from an uncompressed
-`.sas7bdat` (numbers of 3 to 8 bytes alike), 1.2 s from a compressed
-`.sav`, a `.zsav` or an XPORT file,
-2 to 3.5 s from a compressed `.sas7bdat`, and 8 s from a `.por`, whose
-base-30 numbers are decoded one digit at a time.
+The readers are pure Jennifer, so a large file takes a while. 10,000 rows
+of 20 variables (16 numeric, 4 string), on Jennifer 0.28.0 unless noted:
+
+| File | Time |
+|---|---|
+| Stata `.dta` | about 0.05 s |
+| uncompressed `.sav` | 0.15 s |
+| compressed `.sav`, `.zsav` | about 0.5 s (estimate) |
+| XPORT | 0.6 s |
+| uncompressed `.sas7bdat` (numbers of 3 to 8 bytes alike) | 0.7 s (Jennifer 0.27.0) |
+| compressed `.sas7bdat` | 2 to 3.5 s (Jennifer 0.27.0) |
+| `.por` | 4 s; base-30 numbers are decoded one digit at a time |
 
 ## Not covered
 
